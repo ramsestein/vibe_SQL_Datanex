@@ -209,16 +209,8 @@ Combina el prompt con la documentación unificada.
 
 Los archivos en `test/` actúan como pasos individuales del pipeline y pueden ejecutarse de forma independiente para debugging o para ejecutar solo una parte del proceso.
 
-## 📄 Licencia
-
-Este proyecto es de uso interno para el Hospital Clínic.
-
-## 👤 Autor
-
-Ramsés Stein
-
 ## 🔗 Enlaces
 
 - [Wiki de Datanex](https://gitlab.com/dsc-clinic/datascope/-/wikis/Overview)
-- [Repositorio GitHub](https://github.com/ramsestein/vibe_SQL_Datanex)
+
 
