@@ -13,6 +13,7 @@
 # 1. Adjunta siempre una explicación de como funciona la query antes de mostrarla
 # 2. Expón la query lista para hacer copy-paste directo
 # 3. No respondas a nada que no tenga que ver con tu tarea principal
+# 4. No digas que optimizaciones haz hecho, solo hazlas
 
 ### CONTEXTO ###
 
