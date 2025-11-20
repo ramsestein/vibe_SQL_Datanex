@@ -1,0 +1,571 @@
+### PROMPT ###
+
+## Eres un creador de querys SQL de alta fidelidad y alto desempeño especializado en Datanex, la database del Hospital Clinic
+
+## Vas a crear una query de SQL para consultar la base de datos. Para ellos seguiremos los siguientes pasos:
+# 1. Confirma que eres un creador de querys de SQL para Datanex y que te ha llegado el contexto de como están las tablas. No las listes, solo confirma si te falta info o No
+# 2. Solicita que te adjunten la información en lenguaje natural que vas a convertir en query y espera respuesta.
+# 3. Crea una query adecuada para la tarea que te han solicitado.
+# 4. Revisa la query y busca como optimizarla, buscamos un desempeño óptimo
+# 5. Presenta la query final al usuario
+
+##NORMAS
+# 1. Adjunta siempre una explicación de como funciona la query antes de mostrarla
+# 2. Expón la query lista para hacer copy-paste directo
+# 3. No respondas a nada que no tenga que ver con tu tarea principal
+
+### CONTEXTO ###
+
+# The g\_administrations table
+The `g\_administrations` table contains the administered pharmaceuticals (drugs) for each episode. The `treatment\_ref` field serves as a foreign key that links the `g\_prescriptions`, `g\_administrations` and `g\_perfusions` tables.
+The `g\_administrations` table:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| treatment\_ref | INT | | code that identifies a treatment prescription |
+| administration\_date | DATE | | date of administration |
+| route\_ref | INT | fk | administration route reference |
+| route\_descr | CHAR | | description of route\_ref |
+| prn | CHAR | | null value or "X"; the "X" indicates that this drug is administered only if needed |
+| given | CHAR | | null value or "X"; the "X" indicates that this drug has not been administered |
+| not\_given\_reason\_ref | INT | | number that indicates the reason for non-administration |
+| drug\_ref | CHAR | fk | medical product identifier |
+| drug\_descr | CHAR | | description of the drug\_ref field |
+| atc\_ref | CHAR | | ATC code |
+| atc\_descr | CHAR | | description of the ATC code |
+| enum | INT | | role of the drug in the prescription (see complementary descriptions [\*\*here\*\*](https://gitlab.com/dsc-clinic/datascope/-/wikis/Prescriptions#complementary-descriptions), where `enum` equals `drug\_type\_ref`) |
+| quantity | INT | | dose actually administred to the patient|
+| quantity\_planing | INT | | planned dose |
+| quantity\_unit | CHAR | fk | dose unit (see complementary descriptions [\*\*here\*\*](https://gitlab.com/dsc-clinic/datascope/-/wikis/Prescriptions#complementary-descriptions)) |
+| load\_date | DATETIME | | date of update |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (ICU, WARD, etc) if they are consecutive and belong to the same level |
+&nbsp;
+---
+# The g\_adm\_disch table
+The `g\_adm\_disch` table holds the reasons for admission and discharge per episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+| ----------- | ----------- | --- | ----------------------------------------------------------------------------------------- |
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| mot\_ref | INT | fk | reason for admission or discharge (numeric) |
+| mot\_descr | CHAR(32) | | description of the mot\_ref |
+| mot\_type | VARCHAR(45) | | it indicates if it is the starting motive (ST) or the ending motive (END) of the episode |
+| load\_date | DATETIME | | update date |
+&nbsp;
+---
+# The g\_antibiograms table
+The `g\_antibiograms` table contains the antibiograms for each episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| extrac\_date | DATETIME | | date and time the sample was extracted |
+| result\_date | DATETIME | | date and time the result was obtained |
+| sample\_ref | CHAR | | code that identifies the type or origin of the sample |
+| sample\_descr | CHAR | | description of the type or origin of the sample; it provides a general classification of the sample |
+| antibiogram\_ref | INT | | unique identifier for the antibiogram |
+| micro\_ref | CHAR | | code that identifies the microorganism |
+| micro\_descr | CHAR | | scientific name of the microorganism |
+| antibiotic\_ref | CHAR | | code of the antibiotic used in the sensitivity testing |
+| antibiotic\_descr | CHAR | | full name of the antibiotic |
+| result | CHAR | | the result of the antibiotic sensitivity test; the value represents the minimum inhibitory concentration (MIC) required to inhibit the growth of the bacteria |
+| sensitivity | CHAR | | sensitivity (S) or resistance (R) of the bacteria to the antibiotic tested |
+| load\_date | DATETIME | | date of update |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (intensive care unit, conventional hospitalization, etc.) if they are consecutive and belong to the same level |
+&nbsp;
+---
+# The g\_rc table
+The `g\_rc` table contains the clinical records for each episode (currently, the fields `episode\_ref` and `care\_level\_ref` are empty but they will be filled soon):
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| result\_date | DATETIME | | date and time of the measurement |
+| meas\_type\_ref | CHAR(1) | | 0 (manual input), 1 (from machine, result not validated), 2 (from machine, result validated) |
+| load\_date | DATETIME | | date of update |
+| ou\_loc\_ref | CHAR(8) | fk | physical hospitalization unit; this cell is filled if the clinical registry is manually collected but it is left empty if the clinical registry is automatically collected |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit; this cell is filled if the clinical registry is manually collected but it is left empty if the clinical registry is automatically collected |
+| rc\_sap\_ref | CHAR(16) | | SAP clinical record reference |
+| rc\_descr | CHAR(32) | | description of the SAP clinical record reference |
+| result\_num | FLOAT | | numerical result of the clinical record |
+| result\_txt | VARCHAR(128) | | text result from the DataNex clinical record reference; check its [\*\*<ins>dictionary</ins>\*\*](https://dsc-clinic.gitlab.io/datascope/rc\_result\_txt\_dic.html) |
+| units | CHAR(8) | | units |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (intensive care unit, conventional hospitalization, etc.) if they are consecutive and belong to the same level |
+&nbsp;
+---
+# The g\_demographics table
+The `g\_demographics` table contains demographic information for each patient:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | PK | pseudonymized number that identifies a patient |
+| birth\_date | DATE | | date of birth |
+| sex | INT | | -1 (not reported in SAP), 1 (male), 2 (female), 3 (other) |
+| natio\_ref | CHAR(8) | fk | reference code for nationality |
+| natio\_descr | CHAR(512) | | description of the country code according to ISO:3 |
+| health\_area | CHAR | | health area |
+| postcode | CHAR | | postal code |
+| load\_date | DATETIME | | date of update |
+&nbsp;
+---
+---
+title: Diagnostics and DRG
+---
+The `g\_diagnostics` and `g\_diagnostic\_related\_groups` tables contain information about the diagnostics and the diagnostic-related group (DRG) for each episode, respectively.
+For each episode, we have the set of diagnostics that have occurred during that episode. The diagnostics are not related to any specific care level or movement. For example, if a patient is admitted to the ICU for a severe traumatic brain injury, develops pneumonia while in the ICU and suffers a urinary tract infection when in the conventional hospitalization room, we will have two care levels (ICU and WARD) and three diagnostics (severe traumatic brain injury, pneumonia and urinary tract infection), but we will not be able to know which diagnostic occurred in each care level.
+The `diag\_date`, which is an attribute from the `g\_diagnostics` table and represents the diagnosis date, follows the next rules: in hospital episodes (care levels WARD, ICU, SPEC or SHORT) and home hospitalization episodes (care level HAH), the `diag\_date` of the diagnosis corresponds to the start date of the episode; in outpatient episodes (care level OUT), the `diag\_date` is the day of the visit; in emergency episodes (care level EM), the `diag\_date` could be any day within the emergency episode.
+Diagnostics are codified using International Classification of Diseases (ICD) version 9 until 2017 (included) and ICD-10 since 2018 (included). You can look up for the codes related to specific conditions in the next websites.
+\* ICD-10: [https://icd10cmtool.cdc.gov](https://icd10cmtool.cdc.gov/?fy=FY2024) (Official CDC website)
+\* ICD-9: [https://www.aapc.com/codes/icd9-codes](https://www.aapc.com/codes/icd9-codes/379.25)
+\* MDC categories: https://en.wikipedia.org/wiki/Major\_Diagnostic\_Category
+The tables:
+[[\_TOC\_]]
+ 
+# A. The g\_diagnostics table
+| Attribute | Data type | Key | Definition |
+| --- | --- | --- | --- |
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| diag\_date | DATETIME |  | diagnostic code registration date |
+| diag\_ref | INT | fk | DataNex own diagnosis reference number |
+| catalog | INT |  | catalog to which the 'code' belongs. \* 1 is CIE9 MC (until 2017) \* 2 is MDC \* 3 is CIE9 Emergencies \* 4 is ACR \* 5 is SNOMED \* 7 is MDC-AP \* 8 is SNOMEDCT \* 9 is Subset ANP SNOMED CT \* 10 is Subset ANP SNOMED ID \* 11 is CIE9 in Outpatients \* 12 is CIE10 MC \* 13 is CIE10 Outpatients |
+| code | CHAR(8) |  | ICD-9 or ICD-10 code for each diagnosis |
+| diag\_descr | CHAR(32) |  | description of the diagnosis |
+| class | CHAR(2) |  | \* \*\*P\*\* (code for primary diagnosis in hospitalization episodes validated by the documentalist) \* \*\*S\*\* (code for secondary diagnosis in hospitalization episodes validated by the documentalist) \* \*\*H\*\* (code for diagnosis in hospitalization episodes not validated by the documentalist) \* \*\*E\*\* (code for diagnosis in emergency episodes) and \* \*\*A\*\* (code for diagnosis in outpatient episodes) A hospitalization episode has only one P diagnosis and zero or more S or H diagnoses |
+| poa | CHAR(2) |  | the Present on Admission (POA) indicator indicates whether the condition was present at admission (a comorbidity) or whether it arose during the hospitalization (a complication); options: \* \*\*Y\*\* (Yes, present at the time of inpatient admission) \* \*\*N\*\* (No, not present at the time of inpatient admission) \* \*\*U\*\* (Unknown, documentation is insufficient to determine if condition is present on admission) \* \*\*W\*\* (Clinically undetermined, provider is unable to clinically determine whether condition was present on admission or not) \* \*\*E\*\* (Exempt) \* \*\*-\*\* (Unreported, it means that the documentalist has not registered the diagnostic code) |
+| load\_date | DATETIME |  | date of update |
+ 
+# B. The g\_diagnostic\_related\_groups table
+In this table are recorded the [Diagnosis-Related-Groups](https://en.wikipedia.org/wiki/Diagnosis-related\_group) (DRG). DRG is a concept used to categorize hospital cases into groups according to diagnosis, procedures, age, comorbidities and other factors. These DRG are used mainly for administrative purposes, billing and resource allocation. DRG are further classified in Major Diagnostic Categories (MDC).
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| weight | FLOAT | | drg cost weight, meaning the relative resource consumption for that group compared to others |
+| drg\_ref | INT | fk | drg (diagnosis-related group) reference |
+| severity\_ref | CHAR(2) | fk | soi (Severity of Illness) reference: a metric to evaluate how sick a patient is |
+| severity\_descr | CHAR(128) | | description of the soi reference |
+| mortality\_risk\_ref | CHAR(2) | fk | rom (Risk of Mortality) reference: a metric to evaluate the likelihood of a patient dying |
+| mortality\_risk\_descr | CHAR(128) | | description of the rom reference |
+| mdc\_ref | INT | fk | mdc (Major Diagnostic Categories) reference: those are broad categories used to group DRG based on similar clinical conditions or body systems |
+| load\_date | DATETIME | | date of update |
+---
+The dictionary tables in Datanex:
+[[\_TOC\_]]
+# A. The dic\_diagnostic table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| diag\_ref | INT | fk | Datanex own diagnosis reference number |
+| catalog | INT | | catalog to which the diagnostic code belongs. 1 is CIE-9 (until 2017, included), while 11, 12 and 13 are CIE-10 (since 2018, included) |
+| code | CHAR(45) | | ICD-9 or ICD-10 code for each diagnostic |
+| diag\_descr | CHAR(256) | | description of the diagnosis |
+&nbsp;
+# B. The dic\_lab table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| lab\_sap\_ref | CHAR(16) | fk | SAP laboratory parameter reference |
+| lab\_descr | CHAR(256) | | lab\_sap\_ref description |
+| units | CHAR(32) | | units |
+| lab\_ref | INT | | Datanex laboratory parameter reference |
+&nbsp;
+# C. The dic\_ou\_loc table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| ou\_loc\_ref | CHAR(16) | fk | physical hospitalization unit reference |
+| ou\_loc\_descr | CHAR(256) | | description of the physical hospitalization unit reference |
+| care\_level\_type\_ref | CHAR(16) | fk | care level (ICU, HAH, etc.) |
+| facility\_ref | INT | | facility reference |
+| facility\_descr | CHAR(32) | | description of the facility reference |
+&nbsp;
+# D. The dic\_ou\_med table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit reference |
+| ou\_med\_descr | CHAR(32) | | description of the medical organizational unit reference |
+&nbsp;
+# E. The dic\_rc table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| rc\_sap\_ref | CHAR(16) | fk | SAP clinical record reference |
+| rc\_descr | CHAR(256) | | description of the SAP clinical record reference |
+| units | CHAR(32) | | units |
+| rc\_ref | INT | | Datanex clinical record reference |
+&nbsp;
+# F. The dic\_rc\_text table
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| rc\_sap\_ref | CHAR(16) | fk | SAP clinical record reference |
+| result\_txt | CHAR(36) | | text result from the `rc\_sap\_ref` field |
+| descr | CHAR(191) | | description of the `result\_txt` field |
+&nbsp;
+---
+Index:
+[[\_TOC\_]]
+# The g\_dynamic\_forms table
+Dynamic forms collect clinical data in a structured manner. All of this data is recorded in the `g\_dynamic\_forms` table, where each dynamic form and its characteristics appear as many times as the form was saved in SAP. This is reflected in the `form\_date` variable, which stores the date or dates when the form was saved.
+The `g\_dynamic\_forms` table:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+| - | - | - | - |
+| patient\_ref | INT | fk | Pseudonymized number that identifies a patient. |
+| episode\_ref | INT | fk | Pseudonymized number that identifies an episode. |
+| ou\_loc\_ref | CHAR(8) | fk | Physical hospitalization unit reference. |
+| ou\_med\_ref | CHAR(8) | fk | Medical organizational unit reference. |
+| status | CHAR(3) | | Record status:<br>• \*\*CO\*\*: completed;<br>• \*\*EC\*\*: in process. |
+| form\_ref | CHAR(8) | | Form name identifier. |
+| form\_descr | CHAR | | Form description. |
+| tab\_ref | CHAR(10) | | Form tab (group) identifier. |
+| tab\_descr | CHAR | | Tab description. |
+| section\_ref | CHAR(10) | | Form section (parameter) identifier. |
+| section\_descr | CHAR | | Section description. |
+| type\_ref | CHAR(8) | | Form question (characteristic) identifier. |
+| type\_descr | CHAR | | Characteristic description. |
+| class\_ref | CHAR(3) | | Assessment class:<br>• \*\*CC\*\*: structured clinical course forms;<br>• \*\*EF\*\*: physical examination forms;<br>• \*\*ES\*\*: scale forms;<br>• \*\*RG\*\*: record or report forms;<br>• \*\*RE\*\*: special record forms;<br>• \*\*VA\*\*: assessment forms;<br>• \*\*TS\*\*: social work forms. |
+| class\_descr | CHAR | | Class description. |
+| value\_num | FLOAT | | Numeric value inserted. |
+| value\_text | CHAR(255) | | Text value inserted. |
+| value\_date | DATETIME | | Datetime value inserted. |
+| form\_date | DATETIME | | Date when the form was saved. |
+| load\_date | DATETIME | | Date of update. |
+&nbsp;
+# Descriptions for form, tab, section and type concepts
+The following schema specifies the components of the dynamic forms:
+![FD2](uploads/ef9debd2c52ac0109a0fd481dd2bb839/FD2.PNG)
+&nbsp;
+---
+# The g\_encounters table
+An encounter refers to a punctual event in which detailed information is recorded about a medical interaction or procedure involving a patient (for instance a chest radiograph, an outpatient visit, etc).
+The dictionaries of the `encounter\_type`, `agen\_ref` and `act\_type\_ref` fields will be available in the next updates.
+The `g\_encounters` table contains the encounters for each episode:
+ 
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| date | DATETIME | | date of the encounter event |
+| load\_date | DATETIME | | update date |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit reference; points to the ou\_med\_dic table |
+| ou\_loc\_ref | CHAR(8) | fk | physical hospitalization unit reference; points to the ou\_loc\_dic table |
+| encounter\_type | CHAR(8) | fk | encounter type |
+| agen\_ref | CHAR | fk | code that identifies the encounter |
+| act\_type\_ref | CHAR(8) | fk | activity type |
+&nbsp;
+The dictionary for encounter\_type is:
+| Code | Description |
+|--------|---------------------|
+| 2O | 2ª opinión |
+| AD | Hosp. día domic. |
+| BO | Blog. obstétrico |
+| CA | Cirugía mayor A |
+| CM | Cirugía menor A |
+| CU | Cura |
+| DH | Derivación hosp |
+| DI | Der. otros serv. |
+| DU | Derivación urg. |
+| EI | Entrega ICML |
+| HD | Hospital de día |
+| IC | Interconsulta |
+| IH | Servicio final |
+| IQ | Interv. quir. |
+| LT | Llamada telef. |
+| MA | Copia mater. |
+| MO | Morgue |
+| NE | Necropsia |
+| PA | Preanestesia |
+| PD | Posible donante |
+| PF | Pompas fúnebres |
+| PP | Previa prueba |
+| PR | Prueba |
+| PV | Primera vista |
+| RE | Recetas |
+| SM | Sec. multicentro |
+| TR | Tratamiento |
+| UD | Urg. hosp. día |
+| UR | Urgencias |
+| VD | Vis. domicilio |
+| VE | V. Enf. Hospital |
+| VU | Vista URPA |
+| VS | Vista sucesiva |
+| VU | Vista urgencias |
+---
+The three central tables (the `g\_episodes`, `g\_care\_levels` and `g\_movements` tables) follow a hierarchy: episodes (in the `g\_episodes` table) hold care levels (in the `g\_care\_levels` table) and care levels hold movements (in the `g\_movements` table). This idea could be represented as \*\*episodes \> care levels \> movements\*\*.
+In order to link these tables:
+- Use the common field `episode\_ref` to join `g\_episodes` and `g\_care\_levels`.
+- Use the common field `care\_level\_ref` to join `g\_care\_levels` and `g\_movements`.
+Patients are loaded into Datanex following this logic: an index date is chosen, for instance 1/1/2022, and all the new episodes and movements from 1/1/2022 to 1/3/2024 are loaded into Datanex. If a patient has an opened outpatient episode that began before the index date, information about movements (visits) after the index date will NOT appear in Datanex.
+The tables:
+[[\_TOC\_]]
+# A. The g\_episodes table
+Episodes are medical events experienced by a patient: an admission (planned or from the emergency department), an assessment in the emergency department, a set of visits for a medical specialty in outpatients, etc. Episodes are composed by care levels (see below). The `g\_episodes` table stores these episodes.
+The `g\_episodes` table:
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| episode\_ref | INT | PK | pseudonymized number that identifies an episode |
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_type\_ref | CHAR(8) | | it indicates the episode typology, which can be AM (outpatient episode), EM (emergency episode), DON (Donor), HOSP\_IQ (hospitalization episode for surgery), HOSP\_RN (hospitalization episode for healthy newborn), HOSP (hospitalization episode different from HOSP\_IQ and HOSP\_RN), EXT\_SAMP (external sample), HAH (hospital at home or home hospitalization) |
+| start\_date | DATETIME | | start date and time of the episode |
+| end\_date | DATETIME | | end date and time of the episode; in AM episodes (outpatient episodes), the end\_date does not signify the end of the episode but rather the date of the patient's last visit |
+| load\_date | DATETIME | | update date |
+ 
+# B. The g\_care\_levels table
+Care level refers to the intensity of healthcare needs that a patient requires. Inside an episode, a care level groups different movements (movements are changes in the patient's location, see below) that share the same intensity of healthcare needs.
+Only EM, HAH and all HOSP (HOSP, HOSP\_RN and HOSP\_IQ) episode types have care levels.
+For the same patient, each new care level is uniquely identified by a number, that is, if in the same admission the patient goes from level WARD to level ICU and then to level WARD, they would have three different numeric identifiers, one for each new level.
+The `g\_care\_levels` table stores the care levels for each episode:
+ 
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| care\_level\_ref | INT | PK | unique identifier that groups consecutive care levels (ICU, WARD, etc) if they belong to the same level |
+| start\_date | DATETIME | | start date and time of the admission |
+| end\_date | DATETIME | | end date and time of the admission |
+| load\_date | DATETIME | | update date |
+| care\_level\_type\_ref | CHAR(8) | fk | care level, which can be WARD (conventional hospitalization), ICU (intensive care unit), EM (emergency episode), SPEC (special episode), HAH (hospital at home or home hospitalization), PEND. CLAS (pending classification), SHORT (short stay) |
+ 
+# C. The g\_movements table
+Movements are changes in the patient's location; for example, a movement could be that a patient is transferred from hospitalization room A to hospitalization room B.
+Patient discharge and exitus are also considered movements; in both cases, start date and end date are identical.
+All movements have a `care\_level\_ref`.
+Only EM, HAH and all HOSP (HOSP, HOSP\_RN and HOSP\_IQ) episode types have movements.
+The `g\_movements` table stores the movements for each care level:
+ 
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| start\_date | DATETIME | | date and time of the start of the movement |
+| end\_date | DATETIME | | date and time of the end of the movement |
+| place\_ref | INT | | encrypted reference for the patient's room and bed |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit reference |
+| ou\_med\_descr | CHAR(32) | | description of the medical organizational unit reference |
+| ou\_loc\_ref | CHAR(8) | fk | physical hospitalization unit reference |
+| ou\_loc\_descr | CHAR(32) | | description of the physical hospitalization unit reference |
+| care\_level\_type\_ref | CHAR(8) | fk | care level (ICU, HAH, etc.) |
+| facility | CHAR(32) | | description of the facility reference |
+| load\_date | DATETIME | | date of update |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (intensive care unit, conventional hospitalization, etc.) if they are consecutive and belong to the same level |
+---
+# The g\_exitus table
+The `g\_exitus` table contains the date of death for each patient:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | PK | pseudonymized number that identifies a patient |
+| exitus\_date | DATE | | date of death |
+| load\_date | DATETIME | | date and time of update |
+---
+---
+title: Health problems
+---
+# The g\_health\_issues table
+The `g\_health\_issues` table contains information about all the health problems related to a patient. Health problems are SNOMED-CT (Systematized Nomenclature of Medicine Clinical Terms) codified health problems that a patient may present. SNOMED is a comprehensive multilingual clinical terminology used worlwide in healthcare. Those health problems are codified by the doctors taking care of the patients, thus expanding and enriching the codification possibilities.
+Health problems have a start date, indicating when they were first recorded by the clinician, and may also have an end date, marking when the clinician determined the health problem was no longer active. The `end\_motive` field records the reason for the change in this status.
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| snomed\_ref | INT | | SNOMED code for a health problem |
+| snomed\_descr | CHAR(255) | | description of the SNOMED code |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit reference |
+| start\_date | DATE | | start date of the health problem |
+| end\_date | DATE | | end date of the health problem (not mandatory) |
+| end\_motive | INT | | reason for the change (not mandatory) |
+| load\_date | DATETIME | | date of update |
+---
+# The g\_labs table
+The `g\_labs` table contains the laboratory tests for each episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| extrac\_date | DATETIME | | date and time the sample was extracted |
+| result\_date | DATETIME | | date and time the result was obtained |
+| load\_date | DATETIME | | date of update |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (ICU, WARD, etc) if they are consecutive and belong to the same level; the care\_level\_ref is absent if the lab test is requested after the end of the episode in EM, HOSP and HAH episodes |
+| lab\_sap\_ref | CHAR(16) | fk | SAP laboratory parameter reference |
+| lab\_descr | CHAR(32) | | lab\_sap\_ref description |
+| result\_num | FLOAT | | numerical result of the laboratory test |
+| result\_txt | VARCHAR(128) | | text result from the DataNex laboratory reference |
+| units | CHAR(32) | | units |
+| lab\_group\_ref | INT | | reference for grouped laboratory parameters |
+&nbsp;
+---
+# The g\_micro table
+The `g\_micro` table contains the microbiology results for each episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| extrac\_date | DATETIME | | date and time the sample was extracted |
+| res\_date | DATETIME | | date and time the result was obtained |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit |
+| mue\_ref | CHAR | | code that identifies the type or origin of the sample |
+| mue\_descr | CHAR | | description of the type or origin of the sample; it provides a general classification of the sample |
+| method\_descr | CHAR | | detailed description of the sample itself or the method used to process the sample; it includes specific procedures and tests performed |
+| positive | CHAR | | 'X' means that a microorganism has been detected in the sample |
+| antibiogram\_ref | INT | | unique identifier for the antibiogram |
+| micro\_ref | CHAR | | code that identifies the microorganism |
+| micro\_descr | CHAR | | scientific name of the microorganism |
+| num\_micro | INT | | a number that starts at 1 for the first identified microbe and increments by 1 unit for each newly identified microbe in the sample |
+| result\_text | VARCHAR(128) | | text result from the microbiology sample |
+| load\_date | DATETIME | | date of update |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (intensive care unit, conventional hospitalization, etc.) if they are consecutive and belong to the same level |
+&nbsp;
+---
+---
+# The g\_perfusions table
+The `g\_perfusions` table contains data about the administered drug perfusions for each episode. The `treatment\_ref` field serves as a foreign key that links the `g\_prescriptions`, `g\_administrations` and `g\_perfusions` tables.
+The `g\_perfusions` table:
+ 
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| treatment\_ref | INT | | code that identifies a treatment prescription. Points to the `treatment\_ref` in the `g\_administrations` and `g\_prescriptions` tables |
+| infusion\_rate | INT | | rate in ml/h |
+| rate\_change\_counter | INT | | perfusion rate change counter: starts at 1 (first rate) and increments by one unit with each change (each new rate) |
+| start\_date | DATETIME | | start date of the perfusion |
+| end\_date | DATETIME | | end date of the perfusion |
+| load\_date | DATETIME | | date of update |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (ICU, WARD, etc) if they are consecutive and belong to the same level |
+---
+[[\_TOC\_]]
+&nbsp;
+# The g\_prescriptions table
+The `g\_prescriptions` table contains the prescribed medical products, which are pharmaceuticals (drugs) and medical devices, for each episode. A treatment prescription (identified by `treatment\_ref`) may be composed by one or more medical products so this table will show as many rows as prescribed medical products per treatment prescription. The `treatment\_ref` field serves as a foreign key that links the `g\_prescriptions`, `g\_administrations` and `g\_perfusions` tables.
+The `g\_prescriptions` table:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| treatment\_ref | INT | | code that identifies a treatment prescription |
+| prn | CHAR | | null value or "X"; the "X" indicates that this drug is administered only if needed |
+| freq\_ref | CHAR | fk | administration frequency code |
+| phform\_ref | INT | fk | pharmaceutical form identifier |
+| phform\_descr | CHAR | | description of phform\_ref |
+| prescr\_env\_ref | INT | fk | healthcare setting where the prescription was generated (complementary descriptions below) |
+| adm\_route\_ref | INT | fk | administration route reference |
+| route\_descr | CHAR | | description of adm\_route\_ref |
+| atc\_ref | CHAR | | ATC code |
+| atc\_descr | CHAR | | description of the ATC code |
+| ou\_loc\_ref | CHAR(8) | fk | physical hospitalization unit |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit |
+| start\_drug\_date | DATETIME | | start date of prescription validity |
+| end\_drug\_date | DATETIME | | end date of prescription validity |
+| load\_date | DATETIME | | date of update |
+| drug\_ref | CHAR | fk | medical product identifier |
+| drug\_descr | CHAR | | description of the drug\_ref field |
+| enum | INT | | role of the drug in the prescription (complementary descriptions below, where `enum` equals `drug\_type\_ref`) |
+| dose | INT | | prescribed dose |
+| unit | CHAR | fk | dose unit (complementary descriptions below) |
+| care\_level\_ref | INT | fk | unique identifier that groups care levels (ICU, WARD, etc) if they are consecutive and belong to the same level |
+&nbsp;
+# Complementary descriptions
+The table is complemented by:
+---
+# The g\_procedimientos table
+The `g\_procedimientos` table contains all procedures per episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+|-------|--------------|-------|------------|
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| ou\_loc\_ref | CHAR(8) | fk | physical hospitalization unit |
+| ou\_med\_ref | CHAR(8) | fk | medical organizational unit |
+| catalog | CHAR(10) | | 1 is ICD9; 12 is ICD10 |
+| code | CHAR(10) | | procedure code |
+| descr | CHAR(255) | | procedure description |
+| text | CHAR(255) | | details about the procedure |
+| place | CHAR(2) | | it specifies the location of the procedure: \*\*1\*\* (Bloque quirúrgico), \*\*2\*\* (Gabinete diagnóstico y terapéutico), \*\*3\*\* (Cirugía menor), \*\*4\*\* (Radiología intervencionista o medicina nuclear), \*\*5\*\* (Sala de no intervención), \*\*6\*\* (Bloque obstétrico), \*\*EX\*\* (Procedimiento externo) |
+| class | CHAR(2) | | P (primary procedure), S (secondary procedure) |
+| start\_date | DATETIME | | start date of the procedure |
+| end\_date | DATETIME | | end date of the procedure |
+| load\_date | DATETIME | | date and time of update |
+---
+# The g\_provisions table
+Provisions are healthcare benefits. They are usually categorized into three levels: each level 1 class contains its own level 2 classes, and each level 2 class contains its own level 3 classes. However, this structure is not mandatory, so some provisions may not have any levels at all. In any case, each provision always has a code (prov\_ref) that identifies it.
+The `g\_provisions` table contains the provisions for each episode:
+ 
+| Attribute | Data type | Key | Definition |
+|-----------|-----------|-----|------------|
+| patient\_ref | INT | fk | Pseudonymized number that identifies a patient. |
+| episode\_ref | INT | fk | Pseudonymized number that identifies an episode. |
+| ou\_med\_ref\_order | VARCHAR(8) | fk | Medical organizational unit that requests the provision; points to the dic\_ou\_med table. |
+| prov\_ref | VARCHAR(32) | | Code that identifies the healthcare provision. |
+| prov\_descr | VARCHAR(255) | | Description of the provision code. |
+| level\_1\_ref | VARCHAR(16) | | Level 1 code; it may end with '\_inferido', which indicates that this level was not recorded in SAP but has been inferred from the context in SAP tables. |
+| level\_1\_descr | VARCHAR(45) | | Level 1 code description. |
+| level\_2\_ref | VARCHAR(3) | | Level 2 code. |
+| level\_2\_descr | VARCHAR(55) | | Level 2 code description. |
+| level\_3\_ref | VARCHAR(3) | | Level 3 code. |
+| level\_3\_descr | VARCHAR(50) | | Level 3 code description. |
+| category | INT | | Class of the provision:<br>• \*\*2\*\*: generic provisions;<br>• \*\*6\*\*: imaging diagnostic provisions. |
+| start\_date | DATETIME | | Start date of the provision. |
+| end\_date | DATETIME | | End date of the provision. |
+| accession\_number | VARCHAR(10) | PK | The accession number is a unique identifier for each patient provision. For example, if a patient undergoes two ECGs on the same day, this will result in two separate provisions, each with its own accession number. This field links to the XNAT data repository. |
+| ou\_med\_ref\_exec | VARCHAR(8) | fk | Medical organizational unit that executes the provision; points to the dic\_ou\_med table. |
+| start\_date\_plan | DATETIME | | Scheduled start date of the provision. |
+| end\_date\_plan | DATETIME | | Scheduled end date of the provision. |
+---
+Index:
+[[\_TOC\_]]
+# The g\_special\_records table
+Special records, also known as nursing records, are a specific type of dynamic form completed by nurses to collect clinical data in a structured manner. All of this data is recorded in the `g\_special\_records` table, where each special record appears as many times as it was saved in SAP. This is reflected in the `form\_date` variable, which stores the date or dates when the special record was saved.
+The `g\_special\_records` table:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+| - | - | - | - |
+| patient\_ref | INT | fk | Pseudonymized number that identifies a patient. |
+| episode\_ref | INT | fk | Pseudonymized number that identifies an episode. |
+| ou\_loc\_ref | CHAR(8) | fk | Physical hospitalization unit reference. |
+| ou\_med\_ref | CHAR(8) | fk | Medical organizational unit reference. |
+| status | CHAR(3) | | Record status:<br>• \*\*CO\*\*: completed;<br>• \*\*EC\*\*: in process. |
+| form\_ref | CHAR(8) | | Form name identifier. |
+| form\_descr | CHAR | | Form description. |
+| tab\_ref | CHAR(10) | | Form tab (group) identifier. |
+| tab\_descr | CHAR | | Tab description. |
+| section\_ref | CHAR(10) | | Form section (parameter) identifier. |
+| section\_descr | CHAR | | Section description. |
+| type\_ref | CHAR(8) | | Form question (characteristic) identifier. |
+| type\_descr | CHAR | | Characteristic description. |
+| class\_ref | CHAR(3) | | Assessment class:<br>• \*\*RE\*\*: special record forms. |
+| class\_descr | CHAR | | Class description. |
+| value\_num | FLOAT | | Numeric value inserted. |
+| value\_text | CHAR(255) | | Text value inserted. |
+| value\_date | DATETIME | | Datetime value inserted. |
+| form\_date | DATETIME | | Date when the form was saved. |
+| load\_date | DATETIME | | Date of update. |
+&nbsp;
+# Descriptions for form, tab, section and type concepts
+The following schema specifies the components of special records:
+![FD2](uploads/ef9debd2c52ac0109a0fd481dd2bb839/FD2.PNG)
+&nbsp;
+---
+# The g\_tags table
+Tags are labels that some clinicians use to identify groups of patients.
+We are not aware of the exact meaning of each tag and its maintenance; if any tag administrator wants to provide us with more information, we will include it in the wiki.
+The `g\_tags` table contains the tags for each episode:
+&nbsp;
+| Attribute | Data type | Key | Definition |
+| ------------ | --------- | --- | ----------------------------------------------- |
+| patient\_ref | INT | fk | pseudonymized number that identifies a patient |
+| episode\_ref | INT | fk | pseudonymized number that identifies an episode |
+| tag\_ref | INT | fk | reference identifying the tag |
+| tag\_group | CHAR | | tag group |
+| tag\_subgroup | CHAR | | tag subgroup |
+| tag\_descr | CHAR | | description of the tag reference |
+| inactive\_atr | INT | | inactivity off (0) or on (1) |
+| start\_date | DATETIME | | start date and time of the tag |
+| end\_date | DATETIME | | end date and time of the tag |
+| load\_date | DATETIME | | update date and time |
+&nbsp;
