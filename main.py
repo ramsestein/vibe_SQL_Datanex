@@ -2,7 +2,7 @@
 Script principal para descargar y procesar la wiki de Datanex.
 """
 
-from src import download_wiki_pages, filter_useful_pages, extract_text, download_linked_pages, unify_markdowns, create_final_output
+from src import download_wiki_pages, filter_useful_pages, extract_text, download_linked_pages, unify_markdowns, unify_dictionaries, create_final_output
 
 
 def main():
@@ -96,14 +96,30 @@ def main():
     else:
         print("\n⚠ No se pudo crear el archivo unificado")
     
-    # Paso 7: Crear archivo final
+    # Paso 7: Unificar diccionarios CSV
     print("\n" + "="*60)
-    print("PASO 7: Creación del archivo final")
+    print("PASO 7: Unificación de diccionarios CSV")
+    print("="*60)
+    
+    dictionaries_file = unify_dictionaries(
+        dicc_dir="dicc",
+        output_file="dicc/dictionaries_unified.md"
+    )
+    
+    if dictionaries_file:
+        print(f"\n✓ Archivo de diccionarios unificado creado: {dictionaries_file}")
+    else:
+        print("\n⚠ No se pudo crear el archivo de diccionarios unificado")
+    
+    # Paso 8: Crear archivo final
+    print("\n" + "="*60)
+    print("PASO 8: Creación del archivo final")
     print("="*60)
     
     final_file = create_final_output(
         prompt_file="prompt.txt",
         wiki_unified_file="data/wiki_unified.md",
+        dictionaries_file="dicc/dictionaries_unified.md",
         output_file="vibe_SQL_copilot.txt"
     )
     

@@ -13,6 +13,8 @@ Este proyecto descarga todas las páginas de la wiki de Datanex desde GitLab, la
 - **Conversión a Markdown**: Convierte HTML a Markdown preservando tablas y estructura
 - **Limpieza automática**: Elimina secciones no relevantes y normaliza el formato
 - **Unificación**: Combina todos los documentos en un solo archivo optimizado
+- **Procesamiento de diccionarios**: Convierte diccionarios CSV a Markdown con optimización de tamaño
+- **Compactación inteligente**: Reduce el tamaño eliminando prefijos comunes y texto redundante
 - **Pipeline modular**: Cada paso es independiente y testeable
 
 ## 📁 Estructura del Proyecto
@@ -23,6 +25,7 @@ pipeline_datanex/
 │   ├── download_wiki.py          # Descarga de páginas wiki
 │   ├── extract_text.py           # Extracción a Markdown
 │   ├── unify_markdown.py         # Unificación de markdowns
+│   ├── unify_dictionaries.py     # Unificación de diccionarios CSV
 │   └── create_final_output.py    # Creación del archivo final
 ├── test/                         # Tests/Pasos del pipeline
 │   ├── test_download_wiki.py
@@ -30,8 +33,13 @@ pipeline_datanex/
 │   ├── test_extract_text.py
 │   ├── test_download_linked_pages.py
 │   ├── test_unify_markdown.py
+│   ├── test_unify_dictionaries.py
 │   ├── test_create_final_output.py
 │   └── run_all_tests.py          # Ejecuta todo el pipeline
+├── dicc/                         # Diccionarios CSV
+│   ├── dic_diagnostic.csv        # Diccionario de diagnósticos
+│   ├── dic_lab.csv               # Diccionario de laboratorio
+│   └── dictionaries_unified.md   # Diccionarios unificados
 ├── data/                         # Datos procesados (ignorado en git)
 │   ├── wiki_html/                # HTML descargado
 │   ├── wiki_work_html/           # HTML filtrado (páginas útiles)
@@ -95,8 +103,9 @@ Este comando ejecuta todos los pasos del pipeline en secuencia:
 3. **Descarga de páginas referenciadas**: Descarga todas las páginas enlazadas en el Overview
 4. **Filtrado**: Filtra solo las páginas listadas en `pags_utiles.txt`
 5. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
-6. **Unificación**: Combina todos los markdowns en un solo archivo
-7. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` → `vibe_SQL_copilot.txt`
+6. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo
+7. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
+8. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md` → `vibe_SQL_copilot.txt`
 
 ### Ejecutar pasos individuales
 
@@ -115,10 +124,13 @@ python test/test_extract_text.py
 # Paso 4: Descarga de referencias
 python test/test_download_linked_pages.py
 
-# Paso 5: Unificación
+# Paso 5: Unificación de markdowns
 python test/test_unify_markdown.py
 
-# Paso 6: Archivo final
+# Paso 6: Unificación de diccionarios
+python test/test_unify_dictionaries.py
+
+# Paso 7: Archivo final
 python test/test_create_final_output.py
 ```
 
@@ -143,7 +155,15 @@ Diagnostics-and-DRG
 
 ### Archivo `prompt.txt`
 
-Este archivo contiene el prompt que se incluirá al inicio del archivo final. Define el comportamiento esperado de Copilot al usar el contexto.
+Este archivo contiene el prompt que se incluirá al inicio del archivo final. Define el comportamiento esperado de Copilot al usar el contexto. Debe contener las secciones `### CONTEXTO ###` y `### DICCIONARIOS ###` donde se insertará el contenido correspondiente.
+
+### Carpeta `dicc/`
+
+Contiene los diccionarios CSV que se procesarán:
+- `dic_diagnostic.csv`: Diccionario de diagnósticos con códigos y descripciones
+- `dic_lab.csv`: Diccionario de laboratorio con códigos y descripciones
+
+Los diccionarios se procesan automáticamente y se optimizan para reducir el tamaño del archivo final.
 
 ## 📊 Pipeline Detallado
 
@@ -169,21 +189,40 @@ Este archivo contiene el prompt que se incluirá al inicio del archivo final. De
 - Convierte todas las páginas filtradas a Markdown
 - Guarda en `data/wiki_markdown/`
 
-### Paso 6: Unificación
+### Paso 6: Unificación de markdowns
 - Combina todos los markdowns en un solo archivo
 - Elimina secciones no relevantes (como "## Wiki Pages")
 - Limpia saltos de línea dobles
 - Convierte tablas HTML a formato Markdown
 - Guarda en `data/wiki_unified.md`
 
-### Paso 7: Archivo final
-- Combina `prompt.txt` + `wiki_unified.md`
+### Paso 7: Unificación de diccionarios
+- Lee todos los archivos CSV de la carpeta `dicc/`
+- Extrae columnas `*_ref` y `*_descr` de cada CSV
+- **Optimización de tamaño**:
+  - Detecta prefijos comunes en los códigos y los compacta
+  - Extrae texto común de las descripciones para evitar repeticiones
+  - Para `dic_lab.csv`: elimina conjunciones, determinantes y comas
+- Guarda en `dicc/dictionaries_unified.md`
+
+### Paso 8: Archivo final
+- Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md`
+- Inserta el contenido de la wiki después de `### CONTEXTO ###`
+- Inserta el contenido de diccionarios después de `### DICCIONARIOS ###`
 - Guarda en `vibe_SQL_copilot.txt`
 
 ## 📝 Archivos Generados
 
-- `data/wiki_unified.md`: Markdown unificado con toda la documentación
-- `vibe_SQL_copilot.txt`: Archivo final listo para usar en Copilot
+- `data/wiki_unified.md`: Markdown unificado con toda la documentación de la wiki
+- `dicc/dictionaries_unified.md`: Diccionarios unificados y optimizados
+- `vibe_SQL_copilot.txt`: Archivo final listo para usar en Copilot con estructura:
+  ```
+  [Contenido de prompt.txt]
+  ### CONTEXTO ###
+  [Contenido de wiki_unified.md]
+  ### DICCIONARIOS ###
+  [Contenido de dictionaries_unified.md]
+  ```
 
 ## 🔍 Funciones Principales
 
@@ -202,15 +241,24 @@ Convierte HTML a Markdown preservando tablas y estructura.
 ### `unify_markdowns()`
 Combina múltiples archivos Markdown en uno solo, limpiando contenido no relevante.
 
+### `unify_dictionaries()`
+Convierte diccionarios CSV a Markdown optimizado:
+- Detecta prefijos comunes en códigos (sistema de árbol)
+- Extrae texto común de descripciones para evitar repeticiones
+- Aplica limpieza especial al diccionario de lab (elimina conjunciones, determinantes, comas)
+- Formato compacto: `prefix:texto_comun|suffix1:diff1|suffix2:diff2|...`
+
 ### `create_final_output()`
-Combina el prompt con la documentación unificada.
+Combina el prompt con la documentación unificada y los diccionarios, organizándolos en las secciones `### CONTEXTO ###` y `### DICCIONARIOS ###`.
 
 ## 🧪 Testing
 
 Los archivos en `test/` actúan como pasos individuales del pipeline y pueden ejecutarse de forma independiente para debugging o para ejecutar solo una parte del proceso.
 
+## 📄 Licencia
+
+Este proyecto es de uso interno para el Hospital Clínic.
+
 ## 🔗 Enlaces
 
 - [Wiki de Datanex](https://gitlab.com/dsc-clinic/datascope/-/wikis/Overview)
-
-

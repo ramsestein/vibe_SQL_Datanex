@@ -2,6 +2,8 @@
 data/wiki_html/
 data/wiki_markdown/
 data/wiki_work_html/
+dicc/dic_diagnostic.csv
+dicc/dic_lab.csv
 
 # Entorno virtual
 venv/

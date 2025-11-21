@@ -1,5 +1,5 @@
 """
-Paso 7 del pipeline: Creación del archivo final.
+Paso 8 del pipeline: Creación del archivo final.
 Ejecuta la función create_final_output con los archivos reales.
 """
 
@@ -13,14 +13,15 @@ from src import create_final_output
 
 
 def test_create_final_output():
-    """Paso 7: Crea el archivo final combinando prompt.txt y wiki_unified.md."""
+    """Paso 8: Crea el archivo final combinando prompt.txt, wiki_unified.md y dictionaries_unified.md."""
     print("="*60)
-    print("PASO 7: Creación del archivo final")
+    print("PASO 8: Creación del archivo final")
     print("="*60)
     
     # Archivos reales del pipeline
     prompt_file = "prompt.txt"
     wiki_unified_file = "data/wiki_unified.md"
+    dictionaries_file = "dicc/dictionaries_unified.md"
     output_file = "vibe_SQL_copilot.txt"
     
     # Verificar que existen los archivos de entrada
@@ -33,16 +34,23 @@ def test_create_final_output():
         print("   Necesitas ejecutar primero el paso 5 (test_unify_markdown.py)")
         return False
     
+    if not os.path.exists(dictionaries_file):
+        print(f"\n✗ ERROR: No se encontró {dictionaries_file}")
+        print("   Necesitas ejecutar primero el paso 6 (test_unify_dictionaries.py)")
+        return False
+    
     try:
         print(f"\nCombinando archivos:")
         print(f"  - {prompt_file}")
         print(f"  - {wiki_unified_file}")
+        print(f"  - {dictionaries_file}")
         print(f"  -> {output_file}")
         
         # Ejecutar la función
         result_file = create_final_output(
             prompt_file=prompt_file,
             wiki_unified_file=wiki_unified_file,
+            dictionaries_file=dictionaries_file,
             output_file=output_file
         )
         
@@ -70,7 +78,7 @@ def test_create_final_output():
             print(f"⚠ El archivo {output_file} no se creó")
         
         print("\n" + "="*60)
-        print("✓ PASO 7 COMPLETADO")
+        print("✓ PASO 8 COMPLETADO")
         print("="*60)
         return True
         
