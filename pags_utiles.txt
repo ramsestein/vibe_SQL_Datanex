@@ -5,7 +5,6 @@ Antibiograms
 Clinical-records
 Demography
 Diagnostics-and-DRG
-Dictionary-tables
 Dynamic-forms
 Encounters
 Episodes,-care-levels-and-movements
