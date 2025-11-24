@@ -46,6 +46,7 @@ pipeline_datanex/
 │   ├── wiki_markdown/            # Markdowns generados
 │   └── wiki_unified.md            # Markdown unificado
 ├── main.py                       # Script principal
+├── ejecutar_pipeline.bat         # Script batch para ejecutar en Windows
 ├── prompt.txt                    # Prompt para Copilot
 ├── pags_utiles.txt               # Lista de páginas a procesar
 └── vibe_SQL_copilot.txt          # Archivo final generado
@@ -92,6 +93,12 @@ pip install -r requirements.txt
 
 ### Ejecutar el pipeline completo
 
+**Windows (más fácil)**:
+```bash
+ejecutar_pipeline.bat
+```
+
+**Desde la línea de comandos**:
 ```bash
 python main.py
 ```
@@ -144,7 +151,7 @@ python test/run_all_tests.py
 
 ### Archivo `pags_utiles.txt`
 
-Este archivo contiene la lista de páginas wiki que se procesarán. Cada línea debe contener el nombre de la página (sin extensión):
+Este archivo define qué páginas de la wiki se incluirán en el prompt final. Cada línea debe contener el nombre de la página (sin extensión):
 
 ```
 Overview
@@ -152,6 +159,8 @@ Administrations
 Diagnostics-and-DRG
 ...
 ```
+
+**⚠️ Importante**: La página `Overview` **NO se puede quitar** de este archivo, ya que es necesaria para descargar las páginas referenciadas y el pipeline se romperá si no está presente.
 
 ### Archivo `prompt.txt`
 
@@ -162,6 +171,12 @@ Este archivo contiene el prompt que se incluirá al inicio del archivo final. De
 Contiene los diccionarios CSV que se procesarán:
 - `dic_diagnostic.csv`: Diccionario de diagnósticos con códigos y descripciones
 - `dic_lab.csv`: Diccionario de laboratorio con códigos y descripciones
+
+**⚠️ Configuración de columnas**: Para que el sistema procese correctamente los CSV, **debes renombrar manualmente** las columnas en tus archivos CSV para que terminen en `_ref` y `_descr`. Por ejemplo:
+- Columna de códigos: `codigo_ref`, `id_ref`, `diagnostic_ref`, etc.
+- Columna de descripciones: `descripcion_descr`, `nombre_descr`, `diagnostic_descr`, etc.
+
+El sistema buscará automáticamente columnas que terminen en `*_ref` y `*_descr` en todos los archivos CSV de esta carpeta.
 
 Los diccionarios se procesan automáticamente y se optimizan para reducir el tamaño del archivo final.
 
@@ -198,7 +213,8 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 
 ### Paso 7: Unificación de diccionarios
 - Lee todos los archivos CSV de la carpeta `dicc/`
-- Extrae columnas `*_ref` y `*_descr` de cada CSV
+- Busca columnas que terminen en `*_ref` y `*_descr` (deben estar renombradas manualmente)
+- Extrae las columnas `*_ref` y `*_descr` de cada CSV
 - **Optimización de tamaño**:
   - Detecta prefijos comunes en los códigos y los compacta
   - Extrae texto común de las descripciones para evitar repeticiones
