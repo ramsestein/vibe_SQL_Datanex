@@ -149,15 +149,15 @@ def download_wiki_pages(base_url: str, output_dir: str = "data/wiki_html") -> Di
 
 
 def filter_useful_pages(
-    useful_pages_file: str = "pags_utiles.txt",
+    useful_pages_file: str = "pags_descarte.txt",
     source_dir: str = "data/wiki_html",
     output_dir: str = "data/wiki_work_html"
 ) -> Dict[str, str]:
     """
-    Filtra y copia los archivos HTML excluyendo los que están en pags_utiles.txt.
+    Filtra y copia los archivos HTML excluyendo los que están en pags_descarte.txt.
     
     Esta función copia TODAS las páginas HTML del directorio fuente EXCEPTO las que
-    están listadas en pags_utiles.txt. La página "Overview" siempre se incluye, incluso
+    están listadas en pags_descarte.txt. La página "Overview" siempre se incluye, incluso
     si está en la lista de exclusión.
     
     Args:

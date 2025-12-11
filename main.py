@@ -9,7 +9,7 @@ def main():
     """Función principal que orquesta la descarga de la wiki."""
     wiki_url = "https://gitlab.com/dsc-clinic/datascope/-/wikis/Overview"
     output_directory = "data/wiki_html"
-    useful_pages_file = "pags_utiles.txt"
+    useful_pages_file = "pags_descarte.txt"
     work_output_directory = "data/wiki_work_html"
     
     # Paso 1: Descargar solo Overview
@@ -52,11 +52,11 @@ def main():
     for page_name in sorted(linked_pages.keys()):
         print(f"  - {page_name}.html")
     
-    # Paso 4: Filtrar páginas (excluyendo las listadas en pags_utiles.txt)
+    # Paso 4: Filtrar páginas (excluyendo las listadas en pags_descarte.txt)
     print("\n" + "="*60)
     print("PASO 4: Filtrado de páginas útiles")
     print("="*60)
-    print("(Excluyendo las páginas listadas en pags_utiles.txt)")
+    print("(Excluyendo las páginas listadas en pags_descarte.txt)")
     
     useful_pages = filter_useful_pages(
         useful_pages_file=useful_pages_file,

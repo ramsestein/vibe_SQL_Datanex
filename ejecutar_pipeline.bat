@@ -57,7 +57,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "pags_file=pags_utiles.txt"
+set "pags_file=pags_descarte.txt"
 goto menu
 
 :verificar_dependencias

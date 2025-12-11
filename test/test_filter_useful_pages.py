@@ -1,7 +1,7 @@
 """
 Paso 4 del pipeline: Filtrado de páginas útiles.
 Ejecuta la función filter_useful_pages con los archivos reales.
-Nota: Ahora pags_utiles.txt contiene las páginas a EXCLUIR, no las que se incluyen.
+Nota: pags_descarte.txt contiene las páginas a EXCLUIR (descartar).
 """
 
 import os
@@ -14,7 +14,7 @@ from src import filter_useful_pages
 
 
 def test_filter_useful_pages():
-    """Paso 4: Filtra las páginas excluyendo las listadas en pags_utiles.txt."""
+    """Paso 4: Filtra las páginas excluyendo las listadas en pags_descarte.txt."""
     print("="*60)
     print("PASO 4: Filtrado de páginas útiles")
     print("="*60)
@@ -22,7 +22,7 @@ def test_filter_useful_pages():
     # Directorios reales del pipeline
     source_dir = "data/wiki_html"
     output_dir = "data/wiki_work_html"
-    useful_pages_file = "pags_utiles.txt"
+    useful_pages_file = "pags_descarte.txt"
     
     # Verificar que existe el archivo de páginas a excluir (es opcional, pero recomendado)
     if not os.path.exists(useful_pages_file):

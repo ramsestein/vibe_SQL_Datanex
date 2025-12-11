@@ -48,7 +48,7 @@ pipeline_datanex/
 ├── main.py                       # Script principal
 ├── ejecutar_pipeline.bat         # Script batch para ejecutar en Windows
 ├── prompt.txt                    # Prompt para Copilot
-├── pags_utiles.txt               # Lista de páginas a procesar
+├── pags_descarte.txt             # Lista de páginas a descartar/excluir
 └── vibe_SQL_copilot.txt          # Archivo final generado
 ```
 
@@ -108,7 +108,7 @@ Este comando ejecuta todos los pasos del pipeline en secuencia:
 1. **Descarga del Overview**: Descarga la página principal de la wiki
 2. **Extracción a Markdown**: Convierte el Overview a Markdown
 3. **Descarga de páginas referenciadas**: Descarga todas las páginas enlazadas en el Overview
-4. **Filtrado**: Excluye las páginas listadas en `pags_utiles.txt` (procesa todas las demás)
+4. **Filtrado**: Excluye las páginas listadas en `pags_descarte.txt` (procesa todas las demás)
 5. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
 6. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo
 7. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
@@ -149,9 +149,9 @@ python test/run_all_tests.py
 
 ## ⚙️ Configuración
 
-### Archivo `pags_utiles.txt`
+### Archivo `pags_descarte.txt`
 
-Este archivo define qué páginas de la wiki se **EXCLUIRÁN** del prompt final. Cada línea debe contener el nombre de la página a excluir (sin extensión):
+Este archivo define qué páginas de la wiki se **EXCLUIRÁN** (descartarán) del prompt final. Cada línea debe contener el nombre de la página a excluir (sin extensión):
 
 ```
 News
@@ -200,8 +200,8 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 - Guarda en `data/wiki_html/`
 
 ### Paso 4: Filtrado de páginas útiles
-- Lee `pags_utiles.txt` (lista de páginas a EXCLUIR)
-- Copia TODAS las páginas de `data/wiki_html/` EXCEPTO las listadas en `pags_utiles.txt`
+- Lee `pags_descarte.txt` (lista de páginas a EXCLUIR/DESCARTAR)
+- Copia TODAS las páginas de `data/wiki_html/` EXCEPTO las listadas en `pags_descarte.txt`
 - Siempre incluye `Overview` aunque esté en la lista de exclusión
 - Guarda las páginas filtradas en `data/wiki_work_html/`
 
@@ -254,7 +254,7 @@ Descarga páginas wiki desde GitLab, usando la API para obtener el contenido rea
 Extrae enlaces de archivos Markdown y descarga las páginas referenciadas.
 
 ### `filter_useful_pages()`
-Filtra páginas excluyendo las que están en `pags_utiles.txt`. Procesa todas las páginas disponibles excepto las listadas. La página `Overview` siempre se incluye.
+Filtra páginas excluyendo las que están en `pags_descarte.txt`. Procesa todas las páginas disponibles excepto las listadas. La página `Overview` siempre se incluye.
 
 ### `extract_text()`
 Convierte HTML a Markdown preservando tablas y estructura.
