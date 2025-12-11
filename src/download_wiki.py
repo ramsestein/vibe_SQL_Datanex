@@ -154,10 +154,14 @@ def filter_useful_pages(
     output_dir: str = "data/wiki_work_html"
 ) -> Dict[str, str]:
     """
-    Filtra y copia solo los archivos HTML que coinciden con los nombres en pags_utiles.txt.
+    Filtra y copia los archivos HTML excluyendo los que están en pags_utiles.txt.
+    
+    Esta función copia TODAS las páginas HTML del directorio fuente EXCEPTO las que
+    están listadas en pags_utiles.txt. La página "Overview" siempre se incluye, incluso
+    si está en la lista de exclusión.
     
     Args:
-        useful_pages_file: Archivo de texto con los nombres de páginas útiles (uno por línea)
+        useful_pages_file: Archivo de texto con los nombres de páginas a EXCLUIR (uno por línea)
         source_dir: Directorio donde están los HTML descargados
         output_dir: Directorio donde guardar los HTML filtrados
     
@@ -167,27 +171,44 @@ def filter_useful_pages(
     # Crear directorio de salida si no existe
     os.makedirs(output_dir, exist_ok=True)
     
-    # Leer la lista de páginas útiles
-    useful_pages = set()
+    # Leer la lista de páginas a excluir
+    excluded_pages = set()
     try:
         with open(useful_pages_file, 'r', encoding='utf-8') as f:
             for line in f:
                 page_name = line.strip()
                 if page_name:  # Ignorar líneas vacías
-                    useful_pages.add(page_name)
-        print(f"Páginas útiles leídas: {len(useful_pages)}")
+                    excluded_pages.add(page_name)
+        print(f"Páginas a excluir leídas: {len(excluded_pages)}")
     except FileNotFoundError:
-        print(f"Error: No se encontró el archivo {useful_pages_file}")
+        print(f"⚠ Advertencia: No se encontró el archivo {useful_pages_file}")
+        print("  Se procesarán todas las páginas disponibles")
+        excluded_pages = set()
+    
+    # Obtener todos los archivos HTML en el directorio fuente
+    if not os.path.exists(source_dir):
+        print(f"Error: No se encontró el directorio {source_dir}")
         return {}
     
-    # Filtrar y copiar los archivos que coinciden
-    filtered_pages: Dict[str, str] = {}
-    copied_count = 0
-    not_found_count = 0
+    all_html_files = [f for f in os.listdir(source_dir) if f.endswith('.html')]
+    all_pages = {f.replace('.html', '') for f in all_html_files}
+    
+    # Filtrar páginas: incluir todas EXCEPTO las que están en excluded_pages
+    # Pero siempre incluir Overview aunque esté en excluded_pages
+    pages_to_include = all_pages - excluded_pages
+    pages_to_include.add('Overview')  # Overview siempre se incluye
     
     print(f"\nFiltrando páginas desde {source_dir}...")
+    print(f"  - Total de páginas disponibles: {len(all_pages)}")
+    print(f"  - Páginas a excluir: {len(excluded_pages)}")
+    print(f"  - Páginas que se incluirán: {len(pages_to_include)}")
     
-    for page_name in useful_pages:
+    # Copiar los archivos que deben incluirse
+    filtered_pages: Dict[str, str] = {}
+    copied_count = 0
+    skipped_count = 0
+    
+    for page_name in sorted(pages_to_include):
         source_file = os.path.join(source_dir, f"{page_name}.html")
         output_file = os.path.join(output_dir, f"{page_name}.html")
         
@@ -200,14 +221,19 @@ def filter_useful_pages(
                 filtered_pages[page_name] = f.read()
             
             copied_count += 1
-            print(f"  ✓ Copiado: {page_name}")
+            print(f"  ✓ Incluido: {page_name}")
         else:
-            not_found_count += 1
-            print(f"  ✗ No encontrado: {page_name}")
+            skipped_count += 1
+            print(f"  ⚠ No encontrado (será omitido): {page_name}")
+    
+    # Mostrar páginas excluidas
+    excluded_but_found = excluded_pages & all_pages
+    if excluded_but_found:
+        print(f"\n  Páginas excluidas: {', '.join(sorted(excluded_but_found))}")
     
     print(f"\nFiltrado completado:")
-    print(f"  - Páginas copiadas: {copied_count}")
-    print(f"  - Páginas no encontradas: {not_found_count}")
+    print(f"  - Páginas incluidas: {copied_count}")
+    print(f"  - Páginas excluidas: {len(excluded_but_found)}")
     print(f"  - Total guardado en: {output_dir}")
     
     return filtered_pages

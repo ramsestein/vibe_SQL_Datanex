@@ -52,10 +52,11 @@ def main():
     for page_name in sorted(linked_pages.keys()):
         print(f"  - {page_name}.html")
     
-    # Paso 4: Filtrar solo las páginas útiles
+    # Paso 4: Filtrar páginas (excluyendo las listadas en pags_utiles.txt)
     print("\n" + "="*60)
     print("PASO 4: Filtrado de páginas útiles")
     print("="*60)
+    print("(Excluyendo las páginas listadas en pags_utiles.txt)")
     
     useful_pages = filter_useful_pages(
         useful_pages_file=useful_pages_file,
@@ -63,7 +64,7 @@ def main():
         output_dir=work_output_directory
     )
     
-    print(f"\nPáginas útiles guardadas en {work_output_directory}:")
+    print(f"\nPáginas incluidas guardadas en {work_output_directory}:")
     for page_name in sorted(useful_pages.keys()):
         print(f"  - {page_name}")
     

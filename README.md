@@ -108,7 +108,7 @@ Este comando ejecuta todos los pasos del pipeline en secuencia:
 1. **Descarga del Overview**: Descarga la página principal de la wiki
 2. **Extracción a Markdown**: Convierte el Overview a Markdown
 3. **Descarga de páginas referenciadas**: Descarga todas las páginas enlazadas en el Overview
-4. **Filtrado**: Filtra solo las páginas listadas en `pags_utiles.txt`
+4. **Filtrado**: Excluye las páginas listadas en `pags_utiles.txt` (procesa todas las demás)
 5. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
 6. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo
 7. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
@@ -151,16 +151,19 @@ python test/run_all_tests.py
 
 ### Archivo `pags_utiles.txt`
 
-Este archivo define qué páginas de la wiki se incluirán en el prompt final. Cada línea debe contener el nombre de la página (sin extensión):
+Este archivo define qué páginas de la wiki se **EXCLUIRÁN** del prompt final. Cada línea debe contener el nombre de la página a excluir (sin extensión):
 
 ```
-Overview
-Administrations
-Diagnostics-and-DRG
+News
+FAQs
+Access-Instructions
 ...
 ```
 
-**⚠️ Importante**: La página `Overview` **NO se puede quitar** de este archivo, ya que es necesaria para descargar las páginas referenciadas y el pipeline se romperá si no está presente.
+**⚠️ Importante**: 
+- La página `Overview` **siempre se incluirá**, incluso si está en esta lista de exclusión, ya que es necesaria para descargar las páginas referenciadas.
+- Si el archivo está vacío o no existe, se procesarán **todas** las páginas disponibles.
+- Esta es una lista de **exclusión**, no de inclusión.
 
 ### Archivo `prompt.txt`
 
@@ -197,8 +200,10 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 - Guarda en `data/wiki_html/`
 
 ### Paso 4: Filtrado de páginas útiles
-- Lee `pags_utiles.txt`
-- Copia solo las páginas listadas a `data/wiki_work_html/`
+- Lee `pags_utiles.txt` (lista de páginas a EXCLUIR)
+- Copia TODAS las páginas de `data/wiki_html/` EXCEPTO las listadas en `pags_utiles.txt`
+- Siempre incluye `Overview` aunque esté en la lista de exclusión
+- Guarda las páginas filtradas en `data/wiki_work_html/`
 
 ### Paso 5: Extracción a Markdown de páginas útiles
 - Convierte todas las páginas filtradas a Markdown
@@ -249,7 +254,7 @@ Descarga páginas wiki desde GitLab, usando la API para obtener el contenido rea
 Extrae enlaces de archivos Markdown y descarga las páginas referenciadas.
 
 ### `filter_useful_pages()`
-Filtra páginas según la lista en `pags_utiles.txt`.
+Filtra páginas excluyendo las que están en `pags_utiles.txt`. Procesa todas las páginas disponibles excepto las listadas. La página `Overview` siempre se incluye.
 
 ### `extract_text()`
 Convierte HTML a Markdown preservando tablas y estructura.

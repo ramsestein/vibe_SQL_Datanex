@@ -1,6 +1,7 @@
 """
-Paso 2 del pipeline: Filtrado de páginas útiles.
+Paso 4 del pipeline: Filtrado de páginas útiles.
 Ejecuta la función filter_useful_pages con los archivos reales.
+Nota: Ahora pags_utiles.txt contiene las páginas a EXCLUIR, no las que se incluyen.
 """
 
 import os
@@ -13,9 +14,9 @@ from src import filter_useful_pages
 
 
 def test_filter_useful_pages():
-    """Paso 2: Filtra las páginas útiles según pags_utiles.txt."""
+    """Paso 4: Filtra las páginas excluyendo las listadas en pags_utiles.txt."""
     print("="*60)
-    print("PASO 2: Filtrado de páginas útiles")
+    print("PASO 4: Filtrado de páginas útiles")
     print("="*60)
     
     # Directorios reales del pipeline
@@ -23,11 +24,10 @@ def test_filter_useful_pages():
     output_dir = "data/wiki_work_html"
     useful_pages_file = "pags_utiles.txt"
     
-    # Verificar que existe el archivo de páginas útiles
+    # Verificar que existe el archivo de páginas a excluir (es opcional, pero recomendado)
     if not os.path.exists(useful_pages_file):
-        print(f"\n✗ ERROR: No se encontró {useful_pages_file}")
-        print("   Este archivo es necesario para el filtrado.")
-        return False
+        print(f"\n⚠ ADVERTENCIA: No se encontró {useful_pages_file}")
+        print("   Se procesarán todas las páginas disponibles.")
     
     # Verificar que existe el directorio fuente
     if not os.path.exists(source_dir):
@@ -37,8 +37,9 @@ def test_filter_useful_pages():
     
     try:
         print(f"\nFiltrando desde: {source_dir}")
-        print(f"Archivo de páginas útiles: {useful_pages_file}")
+        print(f"Archivo de páginas a excluir: {useful_pages_file}")
         print(f"Directorio de salida: {output_dir}")
+        print("(Nota: Se incluirán TODAS las páginas excepto las listadas en el archivo)")
         
         # Ejecutar la función
         filtered_pages = filter_useful_pages(
@@ -70,7 +71,7 @@ def test_filter_useful_pages():
             print(f"⚠ El directorio {output_dir} no existe")
         
         print("\n" + "="*60)
-        print("✓ PASO 2 COMPLETADO")
+        print("✓ PASO 4 COMPLETADO")
         print("="*60)
         return True
         
