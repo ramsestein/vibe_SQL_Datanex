@@ -69,6 +69,7 @@ pipeline_datanex/
 ├── ejecutar_pipeline.sh          # Script bash para ejecutar en Linux/Mac
 ├── prompt.txt                    # Prompt para Copilot
 ├── pags_descarte.txt             # Lista de páginas a descartar/excluir
+├── README_vibe_query.md          # README estático para repo de salida
 └── vibe_SQL_copilot.txt          # Archivo final generado
 ```
 
@@ -132,7 +133,9 @@ Ambos scripts (`ejecutar_pipeline.bat` y `ejecutar_pipeline.sh`) incluyen:
 - Creación automática del entorno virtual si no existe
 - Verificación e instalación automática de dependencias
 - Ejecución automática del pipeline completo
-- **Push automático**: Al finalizar el pipeline, sube automáticamente el archivo `vibe_SQL_copilot.txt` al repositorio [vibe_query_DataNex](https://github.com/ramsestein/vibe_query_DataNex)
+- **Push automático**: Al finalizar el pipeline, sube automáticamente los siguientes archivos al repositorio [vibe_query_DataNex](https://github.com/ramsestein/vibe_query_DataNex):
+  - `vibe_SQL_copilot.txt` - El archivo principal con toda la documentación
+  - `README.md` - Instrucciones de uso (generado desde `README_vibe_query.md`)
 
 Este comando ejecuta todos los pasos del pipeline en secuencia:
 

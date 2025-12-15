@@ -98,9 +98,15 @@ if ! command -v git &> /dev/null; then
     exit 1
 fi
 
-# Verificar que el archivo existe
+# Verificar que los archivos existen
 if [ ! -f "vibe_SQL_copilot.txt" ]; then
     echo -e "${RED}ERROR: El archivo vibe_SQL_copilot.txt no existe.${NC}"
+    echo "No se puede subir al repositorio remoto."
+    exit 1
+fi
+
+if [ ! -f "README_vibe_query.md" ]; then
+    echo -e "${RED}ERROR: El archivo README_vibe_query.md no existe.${NC}"
     echo "No se puede subir al repositorio remoto."
     exit 1
 fi
@@ -124,11 +130,18 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Copiar el archivo al repositorio clonado
-echo "Copiando archivo al repositorio destino..."
+# Copiar los archivos al repositorio clonado
+echo "Copiando archivos al repositorio destino..."
 cp "vibe_SQL_copilot.txt" "$temp_repo/vibe_SQL_copilot.txt"
 if [ $? -ne 0 ]; then
-    echo -e "${RED}ERROR: No se pudo copiar el archivo.${NC}"
+    echo -e "${RED}ERROR: No se pudo copiar vibe_SQL_copilot.txt.${NC}"
+    rm -rf "$temp_repo"
+    exit 1
+fi
+
+cp "README_vibe_query.md" "$temp_repo/README.md"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: No se pudo copiar README_vibe_query.md.${NC}"
     rm -rf "$temp_repo"
     exit 1
 fi
@@ -137,10 +150,10 @@ fi
 cd "$temp_repo"
 
 # Verificar si hay cambios
-if ! git diff --quiet vibe_SQL_copilot.txt 2>/dev/null; then
-    echo "Haciendo commit del archivo..."
-    git add vibe_SQL_copilot.txt
-    git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
+if ! git diff --quiet 2>/dev/null; then
+    echo "Haciendo commit de los archivos..."
+    git add vibe_SQL_copilot.txt README.md
+    git commit -m "Actualizar vibe_SQL_copilot.txt y README desde pipeline" --no-verify
     if [ $? -ne 0 ]; then
         echo -e "${RED}ERROR: No se pudo hacer commit.${NC}"
         cd ..
@@ -158,10 +171,12 @@ if ! git diff --quiet vibe_SQL_copilot.txt 2>/dev/null; then
     fi
     
     echo ""
-    echo -e "${GREEN}Archivo vibe_SQL_copilot.txt subido exitosamente a:${NC}"
+    echo -e "${GREEN}Archivos subidos exitosamente a:${NC}"
     echo "$remote_url"
+    echo "  - vibe_SQL_copilot.txt"
+    echo "  - README.md"
 else
-    echo "No hay cambios en el archivo. No se necesita actualizar."
+    echo "No hay cambios en los archivos. No se necesita actualizar."
 fi
 
 # Volver al directorio original

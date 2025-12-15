@@ -115,9 +115,15 @@ if errorlevel 1 (
     goto :eof
 )
 
-REM Verificar que el archivo existe
+REM Verificar que los archivos existen
 if not exist "vibe_SQL_copilot.txt" (
     echo ERROR: El archivo vibe_SQL_copilot.txt no existe.
+    echo No se puede subir al repositorio remoto.
+    goto :eof
+)
+
+if not exist "README_vibe_query.md" (
+    echo ERROR: El archivo README_vibe_query.md no existe.
     echo No se puede subir al repositorio remoto.
     goto :eof
 )
@@ -140,11 +146,17 @@ if errorlevel 1 (
     goto :cleanup
 )
 
-REM Copiar el archivo al repositorio clonado
-echo Copiando archivo al repositorio destino...
+REM Copiar los archivos al repositorio clonado
+echo Copiando archivos al repositorio destino...
 copy /y "vibe_SQL_copilot.txt" "%temp_repo%\vibe_SQL_copilot.txt" >nul
 if errorlevel 1 (
-    echo ERROR: No se pudo copiar el archivo.
+    echo ERROR: No se pudo copiar vibe_SQL_copilot.txt.
+    goto :cleanup
+)
+
+copy /y "README_vibe_query.md" "%temp_repo%\README.md" >nul
+if errorlevel 1 (
+    echo ERROR: No se pudo copiar README_vibe_query.md.
     goto :cleanup
 )
 
@@ -152,11 +164,11 @@ REM Cambiar al directorio del repo clonado
 cd "%temp_repo%"
 
 REM Verificar si hay cambios
-git diff --quiet vibe_SQL_copilot.txt 2>nul
+git diff --quiet 2>nul
 if errorlevel 1 (
-    echo Haciendo commit del archivo...
-    git add vibe_SQL_copilot.txt
-    git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
+    echo Haciendo commit de los archivos...
+    git add vibe_SQL_copilot.txt README.md
+    git commit -m "Actualizar vibe_SQL_copilot.txt y README desde pipeline" --no-verify
     if errorlevel 1 (
         echo ERROR: No se pudo hacer commit.
         cd ..
@@ -172,10 +184,12 @@ if errorlevel 1 (
     )
     
     echo.
-    echo [OK] Archivo vibe_SQL_copilot.txt subido exitosamente a:
+    echo [OK] Archivos subidos exitosamente a:
     echo %remote_url%
+    echo   - vibe_SQL_copilot.txt
+    echo   - README.md
 ) else (
-    echo No hay cambios en el archivo. No se necesita actualizar.
+    echo No hay cambios en los archivos. No se necesita actualizar.
 )
 
 REM Volver al directorio original
