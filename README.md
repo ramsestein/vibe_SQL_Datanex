@@ -47,6 +47,7 @@ pipeline_datanex/
 │   └── wiki_unified.md            # Markdown unificado
 ├── main.py                       # Script principal
 ├── ejecutar_pipeline.bat         # Script batch para ejecutar en Windows
+├── ejecutar_pipeline.sh          # Script bash para ejecutar en Linux/Mac
 ├── prompt.txt                    # Prompt para Copilot
 ├── pags_descarte.txt             # Lista de páginas a descartar/excluir
 └── vibe_SQL_copilot.txt          # Archivo final generado
@@ -98,10 +99,22 @@ pip install -r requirements.txt
 ejecutar_pipeline.bat
 ```
 
+**Linux/Mac (más fácil)**:
+```bash
+./ejecutar_pipeline.sh
+```
+
 **Desde la línea de comandos**:
 ```bash
 python main.py
 ```
+
+Ambos scripts (`ejecutar_pipeline.bat` y `ejecutar_pipeline.sh`) incluyen:
+- Menú interactivo para gestionar la lista de páginas a excluir
+- Creación automática del entorno virtual si no existe
+- Verificación e instalación automática de dependencias
+- Gestión de páginas: ver, agregar o quitar páginas de la lista de exclusión
+- **Push automático**: Al finalizar el pipeline, sube automáticamente el archivo `vibe_SQL_copilot.txt` al repositorio [vibe_query_DataNex](https://github.com/ramsestein/vibe_query_DataNex)
 
 Este comando ejecuta todos los pasos del pipeline en secuencia:
 

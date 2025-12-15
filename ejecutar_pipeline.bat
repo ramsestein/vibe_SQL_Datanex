@@ -257,8 +257,86 @@ echo.
 echo ========================================
 echo Pipeline completado.
 echo ========================================
+echo.
+
+REM Subir archivo al repositorio remoto
+call :subir_archivo_remoto
+
 pause
 goto menu
+
+:subir_archivo_remoto
+echo ========================================
+echo SUBIENDO ARCHIVO AL REPOSITORIO REMOTO
+echo ========================================
+echo.
+
+REM Verificar que git esté instalado
+git --version >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Git no esta instalado o no esta en el PATH.
+    echo No se puede subir el archivo al repositorio remoto.
+    goto :eof
+)
+
+REM Verificar que el archivo existe
+if not exist "vibe_SQL_copilot.txt" (
+    echo ERROR: El archivo vibe_SQL_copilot.txt no existe.
+    echo No se puede subir al repositorio remoto.
+    goto :eof
+)
+
+REM Configurar el remote si no existe
+set "remote_name=vibe_query"
+set "remote_url=https://github.com/ramsestein/vibe_query_DataNex.git"
+
+git remote get-url "%remote_name%" >nul 2>&1
+if errorlevel 1 (
+    echo Configurando remote "%remote_name%"...
+    git remote add "%remote_name%" "%remote_url%"
+    if errorlevel 1 (
+        echo ERROR: No se pudo agregar el remote.
+        goto :eof
+    )
+) else (
+    REM Verificar que apunta al URL correcto
+    git remote set-url "%remote_name%" "%remote_url%"
+)
+
+echo.
+echo Agregando archivo vibe_SQL_copilot.txt al staging...
+git add vibe_SQL_copilot.txt
+if errorlevel 1 (
+    echo ERROR: No se pudo agregar el archivo al staging.
+    goto :eof
+)
+
+REM Verificar si hay cambios para commitear
+git diff --cached --quiet vibe_SQL_copilot.txt
+if errorlevel 1 (
+    echo Haciendo commit del archivo...
+    git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
+    if errorlevel 1 (
+        echo ERROR: No se pudo hacer commit del archivo.
+        goto :eof
+    )
+    
+    echo Subiendo archivo al repositorio remoto...
+    git push "%remote_name%" main
+    if errorlevel 1 (
+        echo ERROR: No se pudo hacer push al repositorio remoto.
+        echo Verifique que tiene permisos y que el repositorio existe.
+        goto :eof
+    )
+    
+    echo.
+    echo Archivo vibe_SQL_copilot.txt subido exitosamente a:
+    echo %remote_url%
+) else (
+    echo No hay cambios en el archivo. No se necesita actualizar.
+)
+
+goto :eof
 
 :salir
 echo.
