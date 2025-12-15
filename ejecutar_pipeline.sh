@@ -105,43 +105,55 @@ if [ ! -f "vibe_SQL_copilot.txt" ]; then
     exit 1
 fi
 
-# Configurar el remote si no existe
-remote_name="vibe_query"
 remote_url="https://github.com/ramsestein/vibe_query_DataNex.git"
+temp_repo=".temp_vibe_query"
 
-if ! git remote get-url "$remote_name" &> /dev/null; then
-    echo "Configurando remote \"$remote_name\"..."
-    git remote add "$remote_name" "$remote_url"
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}ERROR: No se pudo agregar el remote.${NC}"
-        exit 1
-    fi
-else
-    # Verificar que apunta al URL correcto
-    git remote set-url "$remote_name" "$remote_url"
+# Limpiar directorio temporal si existe
+if [ -d "$temp_repo" ]; then
+    echo "Limpiando directorio temporal anterior..."
+    rm -rf "$temp_repo"
 fi
 
-echo "Agregando archivo vibe_SQL_copilot.txt al staging..."
-git add vibe_SQL_copilot.txt
+# Clonar el repositorio destino (shallow clone para ser rápido)
+echo "Clonando repositorio destino..."
+git clone --depth 1 "$remote_url" "$temp_repo" &> /dev/null
 if [ $? -ne 0 ]; then
-    echo -e "${RED}ERROR: No se pudo agregar el archivo al staging.${NC}"
+    echo -e "${RED}ERROR: No se pudo clonar el repositorio destino.${NC}"
+    echo "Verifique la URL y sus permisos."
+    rm -rf "$temp_repo" 2>/dev/null
     exit 1
 fi
 
-# Verificar si hay cambios para commitear
-if ! git diff --cached --quiet vibe_SQL_copilot.txt; then
+# Copiar el archivo al repositorio clonado
+echo "Copiando archivo al repositorio destino..."
+cp "vibe_SQL_copilot.txt" "$temp_repo/vibe_SQL_copilot.txt"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: No se pudo copiar el archivo.${NC}"
+    rm -rf "$temp_repo"
+    exit 1
+fi
+
+# Cambiar al directorio del repo clonado
+cd "$temp_repo"
+
+# Verificar si hay cambios
+if ! git diff --quiet vibe_SQL_copilot.txt 2>/dev/null; then
     echo "Haciendo commit del archivo..."
+    git add vibe_SQL_copilot.txt
     git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
     if [ $? -ne 0 ]; then
-        echo -e "${RED}ERROR: No se pudo hacer commit del archivo.${NC}"
+        echo -e "${RED}ERROR: No se pudo hacer commit.${NC}"
+        cd ..
+        rm -rf "$temp_repo"
         exit 1
     fi
     
-    echo "Subiendo archivo al repositorio remoto (force push)..."
-    git push "$remote_name" main --force
+    echo "Subiendo archivo al repositorio remoto..."
+    git push origin main --force
     if [ $? -ne 0 ]; then
         echo -e "${RED}ERROR: No se pudo hacer push al repositorio remoto.${NC}"
-        echo "Verifique que tiene permisos y que el repositorio existe."
+        cd ..
+        rm -rf "$temp_repo"
         exit 1
     fi
     
@@ -151,5 +163,12 @@ if ! git diff --cached --quiet vibe_SQL_copilot.txt; then
 else
     echo "No hay cambios en el archivo. No se necesita actualizar."
 fi
+
+# Volver al directorio original
+cd ..
+
+# Limpiar directorio temporal
+echo "Limpiando directorio temporal..."
+rm -rf "$temp_repo"
 
 exit 0

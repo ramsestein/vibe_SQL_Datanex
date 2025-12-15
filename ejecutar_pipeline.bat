@@ -122,46 +122,53 @@ if not exist "vibe_SQL_copilot.txt" (
     goto :eof
 )
 
-REM Configurar el remote si no existe
-set remote_name=vibe_query
 set remote_url=https://github.com/ramsestein/vibe_query_DataNex.git
+set temp_repo=.temp_vibe_query
 
-git remote get-url %remote_name% >nul 2>&1
-if errorlevel 1 (
-    echo Configurando remote %remote_name%...
-    git remote add %remote_name% %remote_url%
-    if errorlevel 1 (
-        echo ERROR: No se pudo agregar el remote.
-        goto :eof
-    )
-) else (
-    REM Verificar que apunta al URL correcto
-    git remote set-url %remote_name% %remote_url%
+REM Limpiar directorio temporal si existe
+if exist "%temp_repo%" (
+    echo Limpiando directorio temporal anterior...
+    rmdir /s /q "%temp_repo%"
 )
 
-echo Agregando archivo vibe_SQL_copilot.txt al staging...
-git add vibe_SQL_copilot.txt
+REM Clonar el repositorio destino (shallow clone para ser rapido)
+echo Clonando repositorio destino...
+git clone --depth 1 "%remote_url%" "%temp_repo%" >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: No se pudo agregar el archivo al staging.
-    goto :eof
+    echo ERROR: No se pudo clonar el repositorio destino.
+    echo Verifique la URL y sus permisos.
+    goto :cleanup
 )
 
-REM Verificar si hay cambios para commitear
-git diff --cached --quiet vibe_SQL_copilot.txt 2>nul
+REM Copiar el archivo al repositorio clonado
+echo Copiando archivo al repositorio destino...
+copy /y "vibe_SQL_copilot.txt" "%temp_repo%\vibe_SQL_copilot.txt" >nul
+if errorlevel 1 (
+    echo ERROR: No se pudo copiar el archivo.
+    goto :cleanup
+)
+
+REM Cambiar al directorio del repo clonado
+cd "%temp_repo%"
+
+REM Verificar si hay cambios
+git diff --quiet vibe_SQL_copilot.txt 2>nul
 if errorlevel 1 (
     echo Haciendo commit del archivo...
+    git add vibe_SQL_copilot.txt
     git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
     if errorlevel 1 (
-        echo ERROR: No se pudo hacer commit del archivo.
-        goto :eof
+        echo ERROR: No se pudo hacer commit.
+        cd ..
+        goto :cleanup
     )
     
-    echo Subiendo archivo al repositorio remoto con force push...
-    git push %remote_name% main --force
+    echo Subiendo archivo al repositorio remoto...
+    git push origin main --force
     if errorlevel 1 (
         echo ERROR: No se pudo hacer push al repositorio remoto.
-        echo Verifique que tiene permisos y que el repositorio existe.
-        goto :eof
+        cd ..
+        goto :cleanup
     )
     
     echo.
@@ -169,6 +176,16 @@ if errorlevel 1 (
     echo %remote_url%
 ) else (
     echo No hay cambios en el archivo. No se necesita actualizar.
+)
+
+REM Volver al directorio original
+cd ..
+
+:cleanup
+REM Limpiar directorio temporal
+if exist "%temp_repo%" (
+    echo Limpiando directorio temporal...
+    rmdir /s /q "%temp_repo%"
 )
 
 goto :eof
