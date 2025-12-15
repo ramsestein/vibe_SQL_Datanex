@@ -14,6 +14,9 @@ dicc/dic_lab.csv
 # Log acumulativo (crece indefinidamente, no versionar)
 data/wiki_html/metadata/download_log.jsonl
 
+# Directorio temporal para push a repo separado
+.temp_vibe_query/
+
 # Entorno virtual
 venv/
 .venv/
