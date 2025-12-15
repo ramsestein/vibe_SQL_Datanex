@@ -72,9 +72,9 @@ def main():
     )
     
     if unified_file:
-        print(f"\n✓ Archivo unificado creado: {unified_file}")
+        print(f"\n[OK] Archivo unificado creado: {unified_file}")
     else:
-        print("\n⚠ No se pudo crear el archivo unificado")
+        print("\n[WARN] No se pudo crear el archivo unificado")
     
     # Paso 5: Unificar diccionarios CSV
     print("\n" + "="*60)
@@ -87,9 +87,9 @@ def main():
     )
     
     if dictionaries_file:
-        print(f"\n✓ Archivo de diccionarios unificado creado: {dictionaries_file}")
+        print(f"\n[OK] Archivo de diccionarios unificado creado: {dictionaries_file}")
     else:
-        print("\n⚠ No se pudo crear el archivo de diccionarios unificado")
+        print("\n[WARN] No se pudo crear el archivo de diccionarios unificado")
     
     # Paso 6: Crear archivo final
     print("\n" + "="*60)
@@ -104,9 +104,9 @@ def main():
     )
     
     if final_file:
-        print(f"\n✓ Archivo final creado: {final_file}")
+        print(f"\n[OK] Archivo final creado: {final_file}")
     else:
-        print("\n⚠ No se pudo crear el archivo final")    
+        print("\n[WARN] No se pudo crear el archivo final")    
 
 if __name__ == "__main__":
     main()

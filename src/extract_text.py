@@ -48,33 +48,67 @@ def extract_text(
             with open(html_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
             
-            # Parsear con BeautifulSoup para extraer solo el contenido principal
+            # Parsear con BeautifulSoup
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # Buscar el contenido principal de la wiki (normalmente está en un div con clase específica)
-            # GitLab wiki suele tener el contenido en <div class="wiki-content"> o similar
-            main_content = None
+            # GitLab wiki carga el contenido dinámicamente desde una API
+            # Buscar el div con data-content-api para obtener el contenido real
+            wiki_app = soup.find('div', attrs={'data-content-api': True})
             
-            # Intentar encontrar el contenido principal
-            for selector in ['div.wiki-content', 'div.wiki', 'article', 'main', 'div.content']:
-                main_content = soup.select_one(selector)
-                if main_content:
-                    break
+            markdown_content = ""
             
-            # Si no se encuentra, usar el body completo
-            if not main_content:
-                main_content = soup.find('body')
+            if wiki_app and wiki_app.get('data-content-api'):
+                # El contenido está en la API, necesitamos buscarlo en el HTML renderizado
+                # Buscar el contenido renderizado en markdown-body o similar
+                content_selectors = [
+                    'div.markdown-body',
+                    'div.wiki-page-content',
+                    'div[class*="markdown"]',
+                    'div.js-wiki-page-content',
+                    'div[data-testid="wiki-page-content"]'
+                ]
+                
+                main_content = None
+                for selector in content_selectors:
+                    main_content = soup.select_one(selector)
+                    if main_content:
+                        break
+                
+                # Si no encontramos el contenido renderizado, buscar en el body
                 if not main_content:
-                    main_content = soup
-            
-            # Convertir a markdown
-            # markdownify convierte HTML a markdown preservando tablas y formato
-            markdown_content = md(
-                str(main_content),
-                heading_style="ATX",  # Usar # para encabezados
-                bullets="-",  # Usar - para listas
-                strip=['script', 'style', 'nav', 'header', 'footer'],  # Eliminar elementos no deseados
-            )
+                    # Buscar el contenedor principal de la wiki
+                    wiki_details = soup.find('div', class_='wiki-page-details')
+                    if wiki_details:
+                        main_content = wiki_details
+                    else:
+                        main_content = soup.find('body')
+                
+                if main_content:
+                    # Convertir a markdown
+                    markdown_content = md(
+                        str(main_content),
+                        heading_style="ATX",
+                        bullets="-",
+                        strip=['script', 'style', 'nav', 'header', 'footer', 'aside'],
+                    )
+            else:
+                # Fallback: buscar contenido principal tradicional
+                for selector in ['div.wiki-content', 'div.wiki', 'article', 'main', 'div.content']:
+                    main_content = soup.select_one(selector)
+                    if main_content:
+                        break
+                
+                if not main_content:
+                    main_content = soup.find('body')
+                    if not main_content:
+                        main_content = soup
+                
+                markdown_content = md(
+                    str(main_content),
+                    heading_style="ATX",
+                    bullets="-",
+                    strip=['script', 'style', 'nav', 'header', 'footer'],
+                )
             
             # Limpiar el markdown (eliminar líneas vacías excesivas)
             lines = markdown_content.split('\n')
