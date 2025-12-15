@@ -107,7 +107,7 @@ echo SUBIENDO ARCHIVO AL REPOSITORIO REMOTO
 echo ========================================
 echo.
 
-REM Verificar que git esté instalado
+REM Verificar que git este instalado
 git --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Git no esta instalado o no esta en el PATH.
@@ -123,20 +123,20 @@ if not exist "vibe_SQL_copilot.txt" (
 )
 
 REM Configurar el remote si no existe
-set "remote_name=vibe_query"
-set "remote_url=https://github.com/ramsestein/vibe_query_DataNex.git"
+set remote_name=vibe_query
+set remote_url=https://github.com/ramsestein/vibe_query_DataNex.git
 
-git remote get-url "%remote_name%" >nul 2>&1
+git remote get-url %remote_name% >nul 2>&1
 if errorlevel 1 (
-    echo Configurando remote "%remote_name%"...
-    git remote add "%remote_name%" "%remote_url%"
+    echo Configurando remote %remote_name%...
+    git remote add %remote_name% %remote_url%
     if errorlevel 1 (
         echo ERROR: No se pudo agregar el remote.
         goto :eof
     )
 ) else (
     REM Verificar que apunta al URL correcto
-    git remote set-url "%remote_name%" "%remote_url%"
+    git remote set-url %remote_name% %remote_url%
 )
 
 echo Agregando archivo vibe_SQL_copilot.txt al staging...
@@ -147,7 +147,7 @@ if errorlevel 1 (
 )
 
 REM Verificar si hay cambios para commitear
-git diff --cached --quiet vibe_SQL_copilot.txt
+git diff --cached --quiet vibe_SQL_copilot.txt 2>nul
 if errorlevel 1 (
     echo Haciendo commit del archivo...
     git commit -m "Actualizar vibe_SQL_copilot.txt desde pipeline" --no-verify
@@ -156,8 +156,8 @@ if errorlevel 1 (
         goto :eof
     )
     
-    echo Subiendo archivo al repositorio remoto (force push)...
-    git push "%remote_name%" main --force
+    echo Subiendo archivo al repositorio remoto con force push...
+    git push %remote_name% main --force
     if errorlevel 1 (
         echo ERROR: No se pudo hacer push al repositorio remoto.
         echo Verifique que tiene permisos y que el repositorio existe.
@@ -165,7 +165,7 @@ if errorlevel 1 (
     )
     
     echo.
-    echo Archivo vibe_SQL_copilot.txt subido exitosamente a:
+    echo [OK] Archivo vibe_SQL_copilot.txt subido exitosamente a:
     echo %remote_url%
 ) else (
     echo No hay cambios en el archivo. No se necesita actualizar.
