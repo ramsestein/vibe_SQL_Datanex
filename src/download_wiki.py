@@ -25,6 +25,7 @@ import re
 import json
 import hashlib
 import logging
+import html
 from datetime import datetime
 from pathlib import Path
 from typing import Set, List, Dict, Optional, Tuple
@@ -258,11 +259,35 @@ def download_wiki_pages(
         
         # Parsear HTML para encontrar enlaces a otras páginas de la wiki
         soup = BeautifulSoup(html_content, 'html.parser')
-            
+        
         # Buscar enlaces en el sidebar/menú lateral y contenido principal
         links_found = set()
         
-        # Buscar el sidebar/menú lateral primero (contiene todas las páginas)
+        # IMPORTANTE: En GitLab, el sidebar del wiki está en un atributo data-custom-sidebar-content
+        # que contiene HTML escapado. Necesitamos extraer y parsear ese contenido.
+        sidebar_data_elem = soup.find(attrs={'data-custom-sidebar-content': True})
+        sidebar_html_escaped = None
+        
+        if sidebar_data_elem:
+            sidebar_html_escaped = sidebar_data_elem.get('data-custom-sidebar-content')
+            if sidebar_html_escaped:
+                logger.info(f"✓ Encontrado data-custom-sidebar-content con {len(sidebar_html_escaped)} caracteres")
+                # Des-escapar el HTML (convierte &lt; a <, &gt; a >, etc.)
+                sidebar_html_unescaped = html.unescape(sidebar_html_escaped)
+                # Parsear el HTML del sidebar
+                sidebar_soup = BeautifulSoup(sidebar_html_unescaped, 'html.parser')
+                # Buscar todos los enlaces con data-wiki-page en el sidebar
+                for link in sidebar_soup.find_all('a', attrs={'data-wiki-page': True}):
+                    wiki_page = link.get('data-wiki-page')
+                    if wiki_page and wiki_page not in ['', '#'] and wiki_page != page_name:
+                        if wiki_page not in downloaded_pages and wiki_page not in pages_to_download:
+                            links_found.add(wiki_page)
+                            pages_to_download.append(wiki_page)
+                            logger.debug(f"  Enlace encontrado en sidebar: {wiki_page}")
+                
+                logger.info(f"✓ Extraídas {len(links_found)} páginas del sidebar personalizado")
+        
+        # También buscar en el sidebar HTML tradicional (por si acaso)
         sidebar_selectors = [
             'aside', 
             'div.wiki-sidebar', 
@@ -278,7 +303,7 @@ def download_wiki_pages(
         for selector in sidebar_selectors:
             sidebar = soup.select_one(selector)
             if sidebar:
-                logger.debug(f"Sidebar encontrado con selector: {selector}")
+                logger.debug(f"Sidebar HTML encontrado con selector: {selector}")
                 break
         
         # Buscar también en el contenido principal
