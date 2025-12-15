@@ -110,10 +110,9 @@ python main.py
 ```
 
 Ambos scripts (`ejecutar_pipeline.bat` y `ejecutar_pipeline.sh`) incluyen:
-- Menú interactivo para gestionar la lista de páginas a excluir
 - Creación automática del entorno virtual si no existe
 - Verificación e instalación automática de dependencias
-- Gestión de páginas: ver, agregar o quitar páginas de la lista de exclusión
+- Ejecución automática del pipeline completo
 - **Push automático**: Al finalizar el pipeline, sube automáticamente el archivo `vibe_SQL_copilot.txt` al repositorio [vibe_query_DataNex](https://github.com/ramsestein/vibe_query_DataNex)
 
 Este comando ejecuta todos los pasos del pipeline en secuencia:
