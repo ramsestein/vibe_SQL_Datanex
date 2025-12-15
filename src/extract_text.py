@@ -4,6 +4,8 @@ Script para extraer texto y convertir HTML a Markdown.
 
 from bs4 import BeautifulSoup
 import os
+import json
+import html
 from typing import Dict
 from markdownify import markdownify as md
 
@@ -51,48 +53,36 @@ def extract_text(
             # Parsear con BeautifulSoup
             soup = BeautifulSoup(html_content, 'html.parser')
             
-            # GitLab wiki carga el contenido dinámicamente desde una API
-            # Buscar el div con data-content-api para obtener el contenido real
-            wiki_app = soup.find('div', attrs={'data-content-api': True})
-            
             markdown_content = ""
             
-            if wiki_app and wiki_app.get('data-content-api'):
-                # El contenido está en la API, necesitamos buscarlo en el HTML renderizado
-                # Buscar el contenido renderizado en markdown-body o similar
-                content_selectors = [
-                    'div.markdown-body',
-                    'div.wiki-page-content',
-                    'div[class*="markdown"]',
-                    'div.js-wiki-page-content',
-                    'div[data-testid="wiki-page-content"]'
-                ]
-                
-                main_content = None
-                for selector in content_selectors:
-                    main_content = soup.select_one(selector)
-                    if main_content:
-                        break
-                
-                # Si no encontramos el contenido renderizado, buscar en el body
-                if not main_content:
-                    # Buscar el contenedor principal de la wiki
-                    wiki_details = soup.find('div', class_='wiki-page-details')
-                    if wiki_details:
-                        main_content = wiki_details
+            # GitLab wiki tiene el contenido en el atributo data-page-info como JSON
+            wiki_app = soup.find('div', attrs={'data-page-info': True})
+            
+            if wiki_app and wiki_app.get('data-page-info'):
+                try:
+                    # Extraer y parsear el JSON
+                    page_info_json = wiki_app.get('data-page-info')
+                    # El JSON está HTML-escapado, necesitamos des-escaparlo
+                    page_info_json = html.unescape(page_info_json)
+                    page_info = json.loads(page_info_json)
+                    
+                    # El contenido está en el campo 'content'
+                    if 'content' in page_info:
+                        markdown_content = page_info['content']
+                        # El contenido puede tener \r\n, normalizarlos a \n
+                        markdown_content = markdown_content.replace('\r\n', '\n')
                     else:
-                        main_content = soup.find('body')
-                
-                if main_content:
-                    # Convertir a markdown
-                    markdown_content = md(
-                        str(main_content),
-                        heading_style="ATX",
-                        bullets="-",
-                        strip=['script', 'style', 'nav', 'header', 'footer', 'aside'],
-                    )
-            else:
-                # Fallback: buscar contenido principal tradicional
+                        print(f"    [WARN] No se encontró 'content' en data-page-info para {page_name}")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"    [WARN] Error al parsear JSON de data-page-info: {e}")
+                except Exception as e:
+                    print(f"    [WARN] Error al extraer contenido de data-page-info: {e}")
+            
+            # Si no se pudo obtener del JSON, intentar fallback
+            if not markdown_content:
+                print(f"    [INFO] Usando fallback para extraer contenido de {page_name}")
+                # Buscar contenido principal tradicional
                 for selector in ['div.wiki-content', 'div.wiki', 'article', 'main', 'div.content']:
                     main_content = soup.select_one(selector)
                     if main_content:
