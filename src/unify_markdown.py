@@ -74,30 +74,57 @@ def convert_html_tables_to_markdown(content: str) -> str:
 
 def unify_markdowns(
     markdown_dir: str = "data/wiki_markdown",
-    output_file: str = "data/wiki_unified.md"
+    output_file: str = "data/wiki_unified.md",
+    excluded_pages_file: str = "pags_descarte.txt"
 ) -> str:
     """
     Unifica todos los archivos markdown en un solo archivo, eliminando la sección "Wiki Pages".
+    Excluye las páginas listadas en pags_descarte.txt.
     
     Args:
         markdown_dir: Directorio donde están los archivos markdown
         output_file: Archivo de salida donde guardar el markdown unificado
+        excluded_pages_file: Archivo con la lista de páginas a excluir
     
     Returns:
         Ruta del archivo generado
     """
+    # Leer la lista de páginas a excluir
+    excluded_pages = set()
+    if os.path.exists(excluded_pages_file):
+        try:
+            with open(excluded_pages_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    page_name = line.strip()
+                    if page_name:  # Ignorar líneas vacías
+                        excluded_pages.add(page_name)
+        except Exception as e:
+            print(f"⚠ Advertencia: No se pudo leer {excluded_pages_file}: {e}")
+    
     # Obtener todos los archivos markdown
     if not os.path.exists(markdown_dir):
         print(f"Error: No se encontró el directorio {markdown_dir}")
         return ""
     
-    md_files = [f for f in os.listdir(markdown_dir) if f.endswith('.md')]
+    all_md_files = [f for f in os.listdir(markdown_dir) if f.endswith('.md')]
+    
+    # Filtrar archivos excluidos
+    md_files = []
+    excluded_count = 0
+    for md_file in all_md_files:
+        page_name = md_file.replace('.md', '')
+        if page_name not in excluded_pages:
+            md_files.append(md_file)
+        else:
+            excluded_count += 1
     
     if not md_files:
-        print(f"No se encontraron archivos markdown en {markdown_dir}")
+        print(f"No se encontraron archivos markdown para unificar en {markdown_dir}")
         return ""
     
     print(f"Unificando {len(md_files)} archivos markdown desde {markdown_dir}...")
+    if excluded_count > 0:
+        print(f"  (Excluyendo {excluded_count} archivos según {excluded_pages_file})")
     
     unified_content = []
     processed_count = 0

@@ -5,8 +5,18 @@ data/wiki_work_html/
 dicc/dic_diagnostic.csv
 dicc/dic_lab.csv
 
+# Opcional: Mantener metadatos en Git para trazabilidad
+# Si quieres versionar los metadatos, comenta estas líneas:
+# data/wiki_html/metadata/manifest.json
+# data/wiki_html/metadata/page_checksums.json
+# data/wiki_html/metadata/README.md
+
+# Log acumulativo (crece indefinidamente, no versionar)
+data/wiki_html/metadata/download_log.jsonl
+
 # Entorno virtual
 venv/
+.venv/
 env/
 ENV/
 

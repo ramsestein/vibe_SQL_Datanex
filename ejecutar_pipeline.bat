@@ -156,8 +156,8 @@ if errorlevel 1 (
         goto :eof
     )
     
-    echo Subiendo archivo al repositorio remoto...
-    git push "%remote_name%" main
+    echo Subiendo archivo al repositorio remoto (force push)...
+    git push "%remote_name%" main --force
     if errorlevel 1 (
         echo ERROR: No se pudo hacer push al repositorio remoto.
         echo Verifique que tiene permisos y que el repositorio existe.

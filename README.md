@@ -1,6 +1,8 @@
 # Pipeline Datanex - Wiki Processor
 
-Pipeline para descargar, limpiar y procesar la wiki de Datanex (base de datos del Hospital Clínic) y generar un archivo de contexto optimizado para GitHub Copilot.
+Pipeline de nivel producción para descargar, procesar y unificar la wiki de Datanex (base de datos del Hospital Clínic) con scraping responsable, trazabilidad completa y reproducibilidad científica.
+
+> **📖 Para documentación detallada del sistema de scraping**, ver [SCRAPING_GUIDE.md](SCRAPING_GUIDE.md)
 
 ## 📋 Descripción
 
@@ -8,14 +10,27 @@ Este proyecto descarga todas las páginas de la wiki de Datanex desde GitLab, la
 
 ## 🚀 Características
 
-- **Descarga automática**: Descarga recursiva de páginas wiki desde GitLab
-- **Filtrado inteligente**: Filtra solo las páginas útiles según un archivo de configuración
-- **Conversión a Markdown**: Convierte HTML a Markdown preservando tablas y estructura
-- **Limpieza automática**: Elimina secciones no relevantes y normaliza el formato
+### Scraping de Nivel Producción
+- **Scraping responsable**: Rate limiting configurable (default: 2s entre requests)
+- **Reintentos automáticos**: Backoff exponencial con hasta 3 intentos por página
+- **Validación de integridad**: Checksums SHA256 de cada página descargada
+- **Detección de cambios**: Solo re-descarga páginas modificadas (ahorra tiempo y ancho de banda)
+- **Logging estructurado**: Logs JSON con timestamp, URL, checksums y resultados
+- **Metadatos completos**: Manifest, logs y checksums para auditoría y reproducibilidad
+- **Manejo robusto de errores**: Continúa ante fallos individuales, registra todo
+- **Dominio seguro**: Solo sigue enlaces dentro del wiki (no sale del dominio)
+- **User-Agent explícito**: Identificación clara como archivador clínico/investigación
+
+### Pipeline de Procesamiento
+- **Descarga automática**: Descarga recursiva de todas las páginas del wiki de GitLab
+- **Estructura jerárquica**: Mantiene organización de carpetas reflejando la wiki
+- **Filtrado inteligente**: Excluye páginas no relevantes según configuración
+- **Conversión a Markdown**: HTML → Markdown preservando tablas y estructura
+- **Limpieza automática**: Elimina secciones no relevantes y normaliza formato
 - **Unificación**: Combina todos los documentos en un solo archivo optimizado
-- **Procesamiento de diccionarios**: Convierte diccionarios CSV a Markdown con optimización de tamaño
-- **Compactación inteligente**: Reduce el tamaño eliminando prefijos comunes y texto redundante
-- **Pipeline modular**: Cada paso es independiente y testeable
+- **Procesamiento de diccionarios**: Convierte CSV a Markdown con optimización de tamaño
+- **Compactación inteligente**: Reduce tamaño eliminando prefijos comunes y redundancia
+- **Pipeline modular**: Cada paso es independiente, testeable y auditable
 
 ## 📁 Estructura del Proyecto
 
@@ -41,7 +56,11 @@ pipeline_datanex/
 │   ├── dic_lab.csv               # Diccionario de laboratorio
 │   └── dictionaries_unified.md   # Diccionarios unificados
 ├── data/                         # Datos procesados (ignorado en git)
-│   ├── wiki_html/                # HTML descargado
+│   ├── wiki_html/                # HTML descargado (con estructura jerárquica)
+│   │   ├── metadata/             # Metadatos de descarga (manifest, logs, checksums)
+│   │   ├── home.html
+│   │   ├── datanex/              # Subcarpetas según estructura del wiki
+│   │   └── ...
 │   ├── wiki_work_html/           # HTML filtrado (páginas útiles)
 │   ├── wiki_markdown/            # Markdowns generados
 │   └── wiki_unified.md            # Markdown unificado
@@ -117,14 +136,12 @@ Ambos scripts (`ejecutar_pipeline.bat` y `ejecutar_pipeline.sh`) incluyen:
 
 Este comando ejecuta todos los pasos del pipeline en secuencia:
 
-1. **Descarga del Overview**: Descarga la página principal de la wiki
-2. **Extracción a Markdown**: Convierte el Overview a Markdown
-3. **Descarga de páginas referenciadas**: Descarga todas las páginas enlazadas en el Overview
-4. **Filtrado**: Excluye las páginas listadas en `pags_descarte.txt` (procesa todas las demás)
-5. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
-6. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo
-7. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
-8. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md` → `vibe_SQL_copilot.txt`
+1. **Descarga desde home**: Descarga la página "home" de la wiki que contiene el menú lateral con todas las páginas disponibles
+2. **Filtrado**: Excluye las páginas listadas en `pags_descarte.txt` (procesa todas las demás)
+3. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
+4. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo (excluyendo las de `pags_descarte.txt`)
+5. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
+6. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md` → `vibe_SQL_copilot.txt`
 
 ### Ejecutar pasos individuales
 
@@ -173,9 +190,10 @@ Access-Instructions
 ```
 
 **⚠️ Importante**: 
-- La página `Overview` **siempre se incluirá**, incluso si está en esta lista de exclusión, ya que es necesaria para descargar las páginas referenciadas.
+- La página `Overview` **siempre se incluirá**, incluso si está en esta lista de exclusión.
 - Si el archivo está vacío o no existe, se procesarán **todas** las páginas disponibles.
 - Esta es una lista de **exclusión**, no de inclusión.
+- Las páginas listadas aquí también se excluirán automáticamente durante la unificación de markdowns.
 
 ### Archivo `prompt.txt`
 
@@ -197,38 +215,40 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 
 ## 📊 Pipeline Detallado
 
-### Paso 1: Descarga del Overview
-- Descarga la página principal de la wiki
-- Guarda el HTML en `data/wiki_html/`
+### Paso 1: Descarga desde home (Scraping Responsable)
+- Descarga la página "home" de la wiki desde [GitLab](https://gitlab.com/dsc-clinic/datascope/-/wikis/home)
+- Extrae todos los enlaces del sidebar/menú lateral y contenido principal
+- Sigue recursivamente enlaces internos del wiki (no sale del dominio)
+- **Rate limiting**: 2 segundos entre requests (configurable)
+- **Reintentos**: Hasta 3 intentos con backoff exponencial (2, 4, 8 segundos)
+- **Validación**: Checksums SHA256, tamaño mínimo, Content-Type
+- **Detección de cambios**: Solo re-descarga si el contenido cambió
+- Guarda HTML en estructura jerárquica: `data/wiki_html/` con subcarpetas
+- **Metadatos completos**:
+  - `metadata/manifest.json`: Inventario completo (timestamp, URLs, lista de páginas)
+  - `metadata/download_log.jsonl`: Log estructurado de cada operación (append-only)
+  - `metadata/page_checksums.json`: SHA256 de cada página para detección de cambios
+  - `metadata/README.md`: Documentación de metadatos y reproducibilidad
 
-### Paso 2: Extracción a Markdown del Overview
-- Extrae el contenido principal del HTML
-- Convierte a Markdown preservando tablas
-- Guarda en `data/wiki_markdown/Overview.md`
-
-### Paso 3: Descarga de páginas referenciadas
-- Lee el Overview.md y extrae todos los enlaces a otras páginas wiki
-- Descarga cada página referenciada
-- Guarda en `data/wiki_html/`
-
-### Paso 4: Filtrado de páginas útiles
+### Paso 2: Filtrado de páginas útiles
 - Lee `pags_descarte.txt` (lista de páginas a EXCLUIR/DESCARTAR)
 - Copia TODAS las páginas de `data/wiki_html/` EXCEPTO las listadas en `pags_descarte.txt`
 - Siempre incluye `Overview` aunque esté en la lista de exclusión
 - Guarda las páginas filtradas en `data/wiki_work_html/`
 
-### Paso 5: Extracción a Markdown de páginas útiles
+### Paso 3: Extracción a Markdown de páginas útiles
 - Convierte todas las páginas filtradas a Markdown
 - Guarda en `data/wiki_markdown/`
 
-### Paso 6: Unificación de markdowns
+### Paso 4: Unificación de markdowns
 - Combina todos los markdowns en un solo archivo
+- **Excluye automáticamente** las páginas listadas en `pags_descarte.txt`
 - Elimina secciones no relevantes (como "## Wiki Pages")
 - Limpia saltos de línea dobles
 - Convierte tablas HTML a formato Markdown
 - Guarda en `data/wiki_unified.md`
 
-### Paso 7: Unificación de diccionarios
+### Paso 5: Unificación de diccionarios
 - Lee todos los archivos CSV de la carpeta `dicc/`
 - Busca columnas que terminen en `*_ref` y `*_descr` (deben estar renombradas manualmente)
 - Extrae las columnas `*_ref` y `*_descr` de cada CSV
@@ -238,7 +258,7 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
   - Para `dic_lab.csv`: elimina conjunciones, determinantes y comas
 - Guarda en `dicc/dictionaries_unified.md`
 
-### Paso 8: Archivo final
+### Paso 6: Archivo final
 - Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md`
 - Inserta el contenido de la wiki después de `### CONTEXTO ###`
 - Inserta el contenido de diccionarios después de `### DICCIONARIOS ###`
@@ -246,8 +266,23 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 
 ## 📝 Archivos Generados
 
-- `data/wiki_unified.md`: Markdown unificado con toda la documentación de la wiki
-- `dicc/dictionaries_unified.md`: Diccionarios unificados y optimizados
+Durante la ejecución del pipeline se generan los siguientes archivos:
+
+### Datos de Descarga
+- `data/wiki_html/`: Archivos HTML descargados con estructura jerárquica
+  - `metadata/manifest.json`: Inventario completo de la descarga
+  - `metadata/download_log.jsonl`: Log estructurado (append-only, mantiene histórico)
+  - `metadata/page_checksums.json`: SHA256 checksums para validación
+  - `metadata/README.md`: Documentación de metadatos
+  - `home.html`, `datanex/`, etc.: Páginas organizadas en carpetas
+
+### Datos Procesados
+- `data/wiki_work_html/`: Archivos HTML filtrados (solo páginas útiles)
+- `data/wiki_markdown/`: Archivos Markdown generados de cada página
+- `data/wiki_unified.md`: Markdown unificado con todo el contenido de la wiki
+- `dicc/dictionaries_unified.md`: Diccionarios CSV convertidos a Markdown
+
+### Salida Final
 - `vibe_SQL_copilot.txt`: Archivo final listo para usar en Copilot con estructura:
   ```
   [Contenido de prompt.txt]
@@ -260,7 +295,13 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 ## 🔍 Funciones Principales
 
 ### `download_wiki_pages()`
-Descarga páginas wiki desde GitLab, usando la API para obtener el contenido real.
+Descarga páginas wiki desde GitLab con scraping responsable de nivel producción:
+- Rate limiting configurable (default: 2s)
+- Reintentos automáticos con backoff exponencial
+- Validación de integridad (SHA256 checksums)
+- Detección de cambios (no re-descarga sin modificaciones)
+- Logging estructurado completo
+- Metadatos de trazabilidad (manifest, logs, checksums)
 
 ### `download_linked_pages()`
 Extrae enlaces de archivos Markdown y descarga las páginas referenciadas.
@@ -292,6 +333,91 @@ Los archivos en `test/` actúan como pasos individuales del pipeline y pueden ej
 
 Este proyecto es de uso interno para el Hospital Clínic.
 
+## 🔬 Reproducibilidad y Trazabilidad
+
+Este pipeline está diseñado para entornos clínicos y de investigación donde la reproducibilidad y trazabilidad son **obligatorias**:
+
+### Reproducibilidad
+1. **Determinismo**: Misma entrada → misma salida
+2. **Versionado completo**: Todo el código está en Git
+3. **Dependencias fijadas**: `requirements.txt` con versiones específicas
+4. **Metadatos timestamped**: Cada descarga registra fecha, hora y configuración
+5. **Configuración explícita**: Todos los parámetros están documentados
+
+### Trazabilidad
+1. **Manifest completo** (`manifest.json`): Qué se descargó, cuándo, desde dónde
+2. **Log estructurado** (`download_log.jsonl`): Cada operación registrada con:
+   - Timestamp ISO 8601
+   - URL completa
+   - Status code HTTP
+   - Tamaño del contenido
+   - SHA256 checksum
+   - Número de intento
+   - Resultado (éxito/error)
+3. **Checksums SHA256**: Validación de integridad de cada archivo
+4. **Append-only log**: El log nunca se sobrescribe, mantiene histórico completo
+5. **README de metadatos**: Documentación legible por humanos
+
+### Detección de Cambios
+- En ejecuciones posteriores, el sistema:
+  1. Lee checksums existentes
+  2. Compara con versión actual del archivo
+  3. Solo re-descarga si hay cambios
+  4. Registra en el log si se usó versión cacheada o se re-descargó
+
+### Auditoría
+Todos los archivos de metadatos pueden usarse para:
+- Auditar qué datos se usaron en análisis específicos
+- Verificar integridad de datos
+- Reproducir análisis exactos
+- Documentar para publicaciones científicas
+
+### Actualización del Wiki
+Para actualizar el contenido del wiki manteniendo trazabilidad:
+```bash
+# Simplemente ejecuta de nuevo el pipeline
+python main.py
+# O usa los scripts automáticos
+./ejecutar_pipeline.sh  # Linux/Mac
+ejecutar_pipeline.bat   # Windows
+```
+
+El sistema:
+1. Detecta qué páginas cambiaron (vía checksums)
+2. Solo re-descarga las modificadas
+3. Registra todo en `download_log.jsonl` (append)
+4. Actualiza `manifest.json` con nueva fecha
+5. Mantiene histórico completo en el log
+
+## ⚠️ Consideraciones y Limitaciones
+
+### Rate Limiting
+- **Default**: 2 segundos entre requests
+- **Justificación**: Scraping responsable, no sobrecargar servidor GitLab
+- **Configurable**: Puede ajustarse en `main.py` si es necesario
+- **Reintentos**: Backoff exponencial (2, 4, 8 segundos) ante errores
+
+### Dependencias Externas
+- **GitLab**: Cambios en la estructura HTML pueden requerir ajustes en selectores
+- **Red**: Requiere conexión estable para descargas masivas
+- **Permisos**: Debe tener acceso al wiki (público o credenciales apropiadas)
+
+### Mantenimiento
+- **Selectores HTML**: Pueden requerir actualización si GitLab cambia su UI
+- **Logs acumulativos**: `download_log.jsonl` crece con cada ejecución (considerar rotación)
+- **Checksums**: Permanecen hasta regeneración completa
+
+### Uso en Producción Clínica
+Este código cumple con prácticas de:
+- ✅ Reproducibilidad científica
+- ✅ Trazabilidad completa
+- ✅ Validación de integridad
+- ✅ Logging estructurado
+- ✅ Manejo robusto de errores
+- ✅ Documentación exhaustiva
+
 ## 🔗 Enlaces
 
-- [Wiki de Datanex](https://gitlab.com/dsc-clinic/datascope/-/wikis/Overview)
+- Wiki original: [Datanex Wiki (home)](https://gitlab.com/dsc-clinic/datascope/-/wikis/home)
+- Proyecto Datascope: [GitLab - dsc-clinic/datascope](https://gitlab.com/dsc-clinic/datascope)
+- GitHub Copilot: [GitHub Copilot](https://github.com/features/copilot)
