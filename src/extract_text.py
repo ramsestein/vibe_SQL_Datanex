@@ -98,11 +98,11 @@ def extract_text(
             
             markdown_pages[page_name] = markdown_content
             converted_count += 1
-            print(f"  ✓ Convertido: {page_name}")
+            print(f"  [OK] Convertido: {page_name}")
             
         except Exception as e:
             error_count += 1
-            print(f"  ✗ Error al convertir {page_name}: {e}")
+            print(f"  [FAIL] Error al convertir {page_name}: {e}")
             continue
     
     print(f"\nConversión completada:")

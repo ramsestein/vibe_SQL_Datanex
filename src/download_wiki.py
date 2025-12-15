@@ -162,7 +162,7 @@ def download_wiki_pages(
                 with open(file_path, 'rb') as f:
                     current_hash = hashlib.sha256(f.read()).hexdigest()
                 if current_hash == existing_hash:
-                    logger.info(f"✓ Sin cambios: {page_name} (usando versión cacheada)")
+                    logger.info(f"[OK] Sin cambios: {page_name} (usando versión cacheada)")
                     downloaded_pages.add(page_name)
                     # Aún así leer el contenido para extraer enlaces
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -185,7 +185,7 @@ def download_wiki_pages(
                     # Validar que la respuesta es HTML
                     content_type = response.headers.get('Content-Type', '')
                     if 'text/html' not in content_type:
-                        logger.warning(f"⚠ Página {page_name} no es HTML (Content-Type: {content_type})")
+                        logger.warning(f"[WARN] Pagina {page_name} no es HTML (Content-Type: {content_type})")
                     
                     html_content = response.text
                     
@@ -219,12 +219,12 @@ def download_wiki_pages(
                     pages_content[page_name] = html_content
                     downloaded_pages.add(page_name)
                     
-                    logger.info(f"✓ Descargado: {page_name} ({len(html_content)} bytes, SHA256: {content_hash[:12]}...)")
+                    logger.info(f"[OK] Descargado: {page_name} ({len(html_content)} bytes, SHA256: {content_hash[:12]}...)")
                     break  # Éxito, salir del loop de reintentos
                     
                 except requests.exceptions.RequestException as e:
                     last_error = e
-                    logger.warning(f"✗ Intento {attempt} fallido para {page_name}: {e}")
+                    logger.warning(f"[FAIL] Intento {attempt} fallido para {page_name}: {e}")
                     
                     log_entry = {
                         'timestamp': datetime.now().isoformat(),
@@ -242,12 +242,12 @@ def download_wiki_pages(
                         logger.info(f"  Reintentando en {backoff}s...")
                         time.sleep(backoff)
                     else:
-                        logger.error(f"✗ Error permanente en {page_name} tras {max_retries} intentos: {last_error}")
+                        logger.error(f"[ERROR] Error permanente en {page_name} tras {max_retries} intentos: {last_error}")
                         continue
                 
                 except Exception as e:
                     last_error = e
-                    logger.error(f"✗ Error inesperado en {page_name}: {e}")
+                    logger.error(f"[ERROR] Error inesperado en {page_name}: {e}")
                     break
             
             # Si no se pudo descargar, continuar con la siguiente
@@ -271,7 +271,7 @@ def download_wiki_pages(
         if sidebar_data_elem:
             sidebar_html_escaped = sidebar_data_elem.get('data-custom-sidebar-content')
             if sidebar_html_escaped:
-                logger.info(f"✓ Encontrado data-custom-sidebar-content con {len(sidebar_html_escaped)} caracteres")
+                logger.info(f"[OK] Encontrado data-custom-sidebar-content con {len(sidebar_html_escaped)} caracteres")
                 # Des-escapar el HTML (convierte &lt; a <, &gt; a >, etc.)
                 sidebar_html_unescaped = html.unescape(sidebar_html_escaped)
                 # Parsear el HTML del sidebar
@@ -285,7 +285,7 @@ def download_wiki_pages(
                             pages_to_download.append(wiki_page)
                             logger.debug(f"  Enlace encontrado en sidebar: {wiki_page}")
                 
-                logger.info(f"✓ Extraídas {len(links_found)} páginas del sidebar personalizado")
+                logger.info(f"[OK] Extraidas {len(links_found)} paginas del sidebar personalizado")
         
         # También buscar en el sidebar HTML tradicional (por si acaso)
         sidebar_selectors = [
@@ -366,7 +366,7 @@ def download_wiki_pages(
                                 logger.debug(f"  Nuevo enlace encontrado en {area_name}: {wiki_page}")
         
         if links_found:
-            logger.info(f"  → {len(links_found)} páginas nuevas encontradas: {', '.join(sorted(list(links_found)[:5]))}{'...' if len(links_found) > 5 else ''}")
+            logger.info(f"  -> {len(links_found)} paginas nuevas encontradas: {', '.join(sorted(list(links_found)[:5]))}{'...' if len(links_found) > 5 else ''}")
     
     # Guardar metadatos de la descarga
     logger.info("\n" + "="*60)
@@ -389,19 +389,19 @@ def download_wiki_pages(
     manifest_file = metadata_dir / 'manifest.json'
     with open(manifest_file, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
-    logger.info(f"✓ Manifest guardado: {manifest_file}")
+    logger.info(f"[OK] Manifest guardado: {manifest_file}")
     
     # 2. Log estructurado (append para mantener histórico)
     log_file = metadata_dir / 'download_log.jsonl'
     with open(log_file, 'a', encoding='utf-8') as f:
         for entry in download_log:
             f.write(json.dumps(entry, ensure_ascii=False) + '\n')
-    logger.info(f"✓ Log de descarga guardado: {log_file} ({len(download_log)} entradas)")
+    logger.info(f"[OK] Log de descarga guardado: {log_file} ({len(download_log)} entradas)")
     
     # 3. Checksums actualizados
     with open(checksums_file, 'w', encoding='utf-8') as f:
         json.dump(existing_checksums, f, indent=2, ensure_ascii=False)
-    logger.info(f"✓ Checksums guardados: {checksums_file} ({len(existing_checksums)} páginas)")
+    logger.info(f"[OK] Checksums guardados: {checksums_file} ({len(existing_checksums)} paginas)")
     
     # 4. README de metadatos
     readme_file = metadata_dir / 'README.md'
@@ -457,10 +457,10 @@ El log completo permite auditar cada operación realizada.
     
     with open(readme_file, 'w', encoding='utf-8') as f:
         f.write(readme_content)
-    logger.info(f"✓ README de metadatos creado: {readme_file}")
+    logger.info(f"[OK] README de metadatos creado: {readme_file}")
     
     logger.info("="*60)
-    logger.info(f"✓ Descarga completada exitosamente")
+    logger.info(f"[OK] Descarga completada exitosamente")
     logger.info(f"  Total de páginas: {len(downloaded_pages)}")
     logger.info(f"  Directorio: {output_path}")
     logger.info(f"  Metadatos: {metadata_dir}")
@@ -502,7 +502,7 @@ def filter_useful_pages(
                     excluded_pages.add(page_name)
         print(f"Páginas a excluir leídas: {len(excluded_pages)}")
     except FileNotFoundError:
-        print(f"⚠ Advertencia: No se encontró el archivo {useful_pages_file}")
+        print(f"[WARN] Advertencia: No se encontro el archivo {useful_pages_file}")
         print("  Se procesarán todas las páginas disponibles")
         excluded_pages = set()
     
@@ -542,10 +542,10 @@ def filter_useful_pages(
                 filtered_pages[page_name] = f.read()
             
             copied_count += 1
-            print(f"  ✓ Incluido: {page_name}")
+            print(f"  [OK] Incluido: {page_name}")
         else:
             skipped_count += 1
-            print(f"  ⚠ No encontrado (será omitido): {page_name}")
+            print(f"  [WARN] No encontrado (sera omitido): {page_name}")
     
     # Mostrar páginas excluidas
     excluded_but_found = excluded_pages & all_pages
@@ -629,10 +629,10 @@ def download_linked_pages(
                         wiki_links.add(page_name)
             
         except Exception as e:
-            print(f"  ⚠ Error al leer {md_file}: {e}")
+            print(f"  [WARN] Error al leer {md_file}: {e}")
             continue
     
-    print(f"  ✓ Encontrados {len(wiki_links)} enlaces únicos a páginas de la wiki")
+        print(f"  [OK] Encontrados {len(wiki_links)} enlaces unicos a paginas de la wiki")
     
     if not wiki_links:
         print("No se encontraron enlaces a páginas de la wiki")
@@ -718,7 +718,7 @@ def download_linked_pages(
                     else:
                         html_content = response.text
                 except Exception as api_error:
-                    print(f"    ⚠ No se pudo obtener contenido desde API: {api_error}")
+                    print(f"    [WARN] No se pudo obtener contenido desde API: {api_error}")
                     # Continuar con el HTML normal
                     html_content = response.text
             else:
@@ -738,7 +738,7 @@ def download_linked_pages(
             
         except requests.exceptions.RequestException as e:
             error_count += 1
-            print(f"  ✗ Error al descargar {page_name}: {e}")
+            print(f"  [FAIL] Error al descargar {page_name}: {e}")
             continue
     
     print(f"\nDescarga completada:")

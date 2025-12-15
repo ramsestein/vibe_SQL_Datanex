@@ -99,7 +99,7 @@ def unify_markdowns(
                     if page_name:  # Ignorar líneas vacías
                         excluded_pages.add(page_name)
         except Exception as e:
-            print(f"⚠ Advertencia: No se pudo leer {excluded_pages_file}: {e}")
+            print(f"[WARN] Advertencia: No se pudo leer {excluded_pages_file}: {e}")
     
     # Obtener todos los archivos markdown
     if not os.path.exists(markdown_dir):
@@ -189,10 +189,10 @@ def unify_markdowns(
             unified_content.append(content_cleaned)
             
             processed_count += 1
-            print(f"  ✓ Procesado: {page_name}")
+            print(f"  [OK] Procesado: {page_name}")
             
         except Exception as e:
-            print(f"  ✗ Error al procesar {md_file}: {e}")
+            print(f"  [FAIL] Error al procesar {md_file}: {e}")
             continue
     
     # Unificar todo el contenido

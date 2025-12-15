@@ -196,7 +196,7 @@ def unify_dictionaries(dicc_dir: str, output_file: str) -> str:
     csv_files = glob.glob(os.path.join(dicc_dir, "*.csv"))
     
     if not csv_files:
-        print(f"⚠ No se encontraron archivos CSV en {dicc_dir}")
+        print(f"[WARN] No se encontraron archivos CSV en {dicc_dir}")
         return None
     
     print(f"Encontrados {len(csv_files)} archivos CSV:")
@@ -231,10 +231,10 @@ def unify_dictionaries(dicc_dir: str, output_file: str) -> str:
                         descr_col = col
                 
                 if not ref_col or not descr_col:
-                    print(f"  ⚠ No se encontraron columnas *_ref y *_descr en {file_name}")
+                    print(f"  [WARN] No se encontraron columnas *_ref y *_descr en {file_name}")
                     continue
                 
-                print(f"  ✓ Columnas encontradas: {ref_col} -> {descr_col}")
+                print(f"  [OK] Columnas encontradas: {ref_col} -> {descr_col}")
                 
                 # Agregar título del diccionario (formato compacto)
                 dict_name = file_name.replace('.csv', '').replace('dic_', '').replace('_', ' ').title()
@@ -274,10 +274,10 @@ def unify_dictionaries(dicc_dir: str, output_file: str) -> str:
                 
                 unified_content.append("")  # Línea en blanco entre diccionarios
                 
-                print(f"  ✓ {len(tuples)} tuplas procesadas")
+                print(f"  [OK] {len(tuples)} tuplas procesadas")
         
         except Exception as e:
-            print(f"  ✗ Error procesando {file_name}: {e}")
+            print(f"  [FAIL] Error procesando {file_name}: {e}")
             continue
     
     # Escribir archivo unificado
@@ -285,9 +285,9 @@ def unify_dictionaries(dicc_dir: str, output_file: str) -> str:
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write('\n'.join(unified_content))
         
-        print(f"\n✓ Archivo unificado creado: {output_file}")
+        print(f"\n[OK] Archivo unificado creado: {output_file}")
         return output_file
     else:
-        print("\n⚠ No se pudo crear el archivo unificado (sin contenido)")
+        print("\n[WARN] No se pudo crear el archivo unificado (sin contenido)")
         return None
 
