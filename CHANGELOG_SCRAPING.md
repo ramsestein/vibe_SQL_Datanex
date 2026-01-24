@@ -1,5 +1,48 @@
 # Changelog - Mejoras de Scraping de Nivel Producción
 
+## Versión 2.1 - Output Ligero (Sin Diccionarios)
+**Fecha**: 2026-01-24
+
+### 🎯 Objetivo
+Reducir drásticamente el tamaño del archivo de contexto para LLMs eliminando los diccionarios de datos que añadían ~38,000 líneas al output final.
+
+---
+
+### ✨ Cambios Principales
+
+#### Eliminación de Diccionarios
+- ❌ **Eliminado**: Paso de unificación de diccionarios CSV
+- ❌ **Eliminado**: `src/unify_dictionaries.py`
+- ❌ **Eliminado**: `test/test_unify_dictionaries.py`
+- ✅ **Resultado**: Archivo final reducido de ~39,000 líneas a ~600 líneas
+
+#### Pipeline Simplificado (5 pasos en lugar de 6)
+1. Descarga desde home
+2. Filtrado de páginas útiles
+3. Extracción a Markdown
+4. Unificación de markdowns
+5. Creación del archivo final (sin diccionarios)
+
+#### Archivos Modificados
+- `main.py`: Eliminada importación y paso de diccionarios
+- `src/create_final_output.py`: `dictionaries_file` ahora es opcional (puede ser `None`)
+- `prompt.txt`: Actualizado para trabajar solo con contexto de wiki
+
+### 📊 Comparativa de Tamaños
+
+| Versión | Líneas | Tamaño |
+|---------|--------|--------|
+| v2.0 (con diccionarios) | ~39,000 | ~2-3 MB |
+| v2.1 (sin diccionarios) | ~600 | ~50-80 KB |
+
+### ✅ Beneficios
+- **Compatible con todos los LLMs**: Incluso modelos con contexto limitado
+- **Carga más rápida**: Menor tiempo de procesamiento
+- **Menor costo**: Menos tokens = menor costo en APIs
+- **Enfoque en estructura**: La documentación de tablas es suficiente para generar queries
+
+---
+
 ## Versión 2.0 - Scraping de Grado Clínico/Investigación
 **Fecha**: 2025-12-15
 

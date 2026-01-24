@@ -3,28 +3,29 @@ Script para crear el archivo final combinando prompt.txt y wiki_unified.md.
 """
 
 import os
+from typing import Optional
 
 
 def create_final_output(
     prompt_file: str = "prompt.txt",
     wiki_unified_file: str = "data/wiki_unified.md",
-    dictionaries_file: str = "dicc/dictionaries_unified.md",
+    dictionaries_file: Optional[str] = None,
     output_file: str = "vibe_SQL_copilot.txt"
 ) -> str:
     """
     Crea el archivo final combinando el prompt, el contenido unificado de la wiki
-    y los diccionarios unificados.
+    y opcionalmente los diccionarios unificados.
     
     Args:
         prompt_file: Archivo con el prompt inicial
         wiki_unified_file: Archivo markdown unificado de la wiki
-        dictionaries_file: Archivo markdown unificado de diccionarios
+        dictionaries_file: Archivo markdown unificado de diccionarios (opcional, None para omitir)
         output_file: Archivo de salida final
     
     Returns:
         Ruta del archivo generado
     """
-    # Verificar que existen los archivos de entrada
+    # Verificar que existen los archivos de entrada obligatorios
     if not os.path.exists(prompt_file):
         print(f"Error: No se encontró el archivo {prompt_file}")
         return ""
@@ -33,14 +34,19 @@ def create_final_output(
         print(f"Error: No se encontró el archivo {wiki_unified_file}")
         return ""
     
-    if not os.path.exists(dictionaries_file):
-        print(f"Error: No se encontró el archivo {dictionaries_file}")
-        return ""
+    # Verificar diccionarios solo si se especificó
+    include_dictionaries = dictionaries_file and os.path.exists(dictionaries_file)
+    if dictionaries_file and not os.path.exists(dictionaries_file):
+        print(f"[WARN] Archivo de diccionarios no encontrado: {dictionaries_file}")
+        print("       Continuando sin diccionarios...")
     
     print(f"Creando archivo final combinando:")
     print(f"  - {prompt_file}")
     print(f"  - {wiki_unified_file}")
-    print(f"  - {dictionaries_file}")
+    if include_dictionaries:
+        print(f"  - {dictionaries_file}")
+    else:
+        print(f"  - (sin diccionarios)")
     print(f"  -> {output_file}")
     
     # Leer el contenido del prompt
@@ -59,13 +65,16 @@ def create_final_output(
         print(f"Error al leer {wiki_unified_file}: {e}")
         return ""
     
-    # Leer el contenido de los diccionarios unificados
-    try:
-        with open(dictionaries_file, 'r', encoding='utf-8') as f:
-            dictionaries_content = f.read().strip()
-    except Exception as e:
-        print(f"Error al leer {dictionaries_file}: {e}")
-        return ""
+    # Leer el contenido de los diccionarios unificados (solo si está habilitado)
+    dictionaries_content = ""
+    if include_dictionaries:
+        try:
+            with open(dictionaries_file, 'r', encoding='utf-8') as f:
+                dictionaries_content = f.read().strip()
+        except Exception as e:
+            print(f"Error al leer {dictionaries_file}: {e}")
+            print("Continuando sin diccionarios...")
+            include_dictionaries = False
     
     # Insertar el contenido en las secciones correspondientes
     # Primero insertar el contenido de wiki después de "### CONTEXTO ###"
@@ -78,15 +87,20 @@ def create_final_output(
         # Si no existe la sección, agregarla al final del prompt
         prompt_content = prompt_content.strip() + "\n\n### CONTEXTO ###\n\n" + wiki_content
     
-    # Luego insertar el contenido de diccionarios después de "### DICCIONARIOS ###"
-    if "### DICCIONARIOS ###" in prompt_content:
-        prompt_content = prompt_content.replace(
-            "### DICCIONARIOS ###",
-            "### DICCIONARIOS ###\n\n" + dictionaries_content
-        )
+    # Luego insertar el contenido de diccionarios después de "### DICCIONARIOS ###" (solo si está habilitado)
+    if include_dictionaries and dictionaries_content:
+        if "### DICCIONARIOS ###" in prompt_content:
+            prompt_content = prompt_content.replace(
+                "### DICCIONARIOS ###",
+                "### DICCIONARIOS ###\n\n" + dictionaries_content
+            )
+        else:
+            # Si no existe la sección, agregarla al final
+            prompt_content = prompt_content.strip() + "\n\n### DICCIONARIOS ###\n\n" + dictionaries_content
     else:
-        # Si no existe la sección, agregarla al final
-        prompt_content = prompt_content.strip() + "\n\n### DICCIONARIOS ###\n\n" + dictionaries_content
+        # Si no hay diccionarios, eliminar la sección vacía del prompt
+        prompt_content = prompt_content.replace("\n### DICCIONARIOS ###", "")
+        prompt_content = prompt_content.replace("### DICCIONARIOS ###", "")
     
     final_content = prompt_content
     

@@ -1,14 +1,17 @@
 # Vibe SQL Copilot - DataNex
 
-Este repositorio contiene el archivo `vibe_SQL_copilot.txt`, una base de conocimiento consolidada de la wiki de DataNex y sus diccionarios de datos, optimizada para ser utilizada como contexto en asistentes de IA (LLMs) para generación de consultas SQL.
+Este repositorio contiene el archivo `vibe_SQL_copilot.txt`, una base de conocimiento consolidada de la wiki de DataNex, optimizada para ser utilizada como contexto en asistentes de IA (LLMs) para generación de consultas SQL.
 
 ## 📋 ¿Qué contiene este archivo?
 
 El archivo `vibe_SQL_copilot.txt` incluye:
 
 1. **Prompt base**: Instrucciones para el asistente de IA sobre cómo generar consultas SQL
-2. **Documentación de la wiki**: Contenido completo de las páginas útiles de la wiki de DataNex (sin páginas administrativas o de descarte)
-3. **Diccionarios de datos unificados**: Todos los diccionarios CSV consolidados con descripciones de tablas y columnas
+2. **Documentación de la wiki**: Contenido completo de las páginas útiles de la wiki de DataNex, incluyendo:
+   - Estructura de todas las tablas (atributos, tipos de datos, claves)
+   - Descripciones detalladas de cada campo
+   - Relaciones entre tablas (foreign keys)
+   - Valores posibles para campos codificados
 
 ## 🚀 Cómo usar este archivo
 
@@ -56,44 +59,34 @@ response = client.chat.completions.create(
 │ (Instrucciones para el asistente)  │
 ├─────────────────────────────────────┤
 │ DOCUMENTACIÓN DE LA WIKI            │
-│ - Overview                          │
-│ - Procedimientos                    │
-│ - Diagnósticos                      │
-│ - FAQs                              │
-│ - etc.                              │
-├─────────────────────────────────────┤
-│ DICCIONARIOS DE DATOS               │
-│ - Tablas y columnas                 │
-│ - Descripciones                     │
-│ - Referencias (_ref)                │
-│ - Descripciones detalladas (_descr) │
+│ - Estructura de tablas              │
+│ - Descripciones de campos           │
+│ - Relaciones (foreign keys)         │
+│ - Valores codificados               │
+│ - Ejemplos de uso                   │
 └─────────────────────────────────────┘
 ```
 
-## ⚠️ Consideraciones importantes
+## ✅ Ventajas de este formato
 
-### Tamaño del archivo
-- El archivo tiene aproximadamente **39,000 líneas**
-- Ocupa alrededor de **~2-3 MB** de texto plano
-- Algunos LLMs tienen límites de contexto, verifica:
-  - GPT-4: 128K tokens (~100K palabras)
-  - Claude 3: 200K tokens (~150K palabras)
-  - GPT-3.5: 16K tokens (~12K palabras) ⚠️ Puede ser insuficiente
+### Tamaño optimizado
+- El archivo tiene aproximadamente **~600 líneas**
+- Ocupa alrededor de **~50-80 KB** de texto plano
+- **Compatible con todos los LLMs**, incluyendo:
+  - GPT-4: ✅ Sin problemas
+  - Claude 3: ✅ Sin problemas
+  - GPT-3.5: ✅ Sin problemas
+  - Modelos locales: ✅ Sin problemas
 
-### Limitaciones de contexto
-Si tu LLM tiene un contexto limitado:
-1. **Divide el contenido**: Usa solo las secciones relevantes para tu consulta
-2. **Prioriza**: 
-   - Prompt base (siempre incluir)
-   - Diccionarios de datos (altamente recomendado)
-   - Páginas de wiki específicas según necesidad
+### Sin necesidad de dividir
+El archivo es lo suficientemente compacto para usarse completo en cualquier LLM moderno.
 
 ### Actualización
 Este archivo se actualiza automáticamente mediante un pipeline que:
 - Descarga las últimas páginas de la wiki de DataNex
 - Filtra páginas según criterios de utilidad
-- Unifica diccionarios de datos actualizados
-- Genera el archivo final consolidado
+- Extrae la documentación de estructura de tablas
+- Genera el archivo final consolidado y compacto
 
 ## 🔄 Última actualización
 

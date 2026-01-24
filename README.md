@@ -6,7 +6,9 @@ Pipeline de nivel producción para descargar, procesar y unificar la wiki de Dat
 
 ## 📋 Descripción
 
-Este proyecto descarga todas las páginas de la wiki de Datanex desde GitLab, las procesa, filtra las páginas relevantes, las convierte a Markdown y genera un archivo unificado (`vibe_SQL_copilot.txt`) que combina un prompt personalizado con toda la documentación de la base de datos. Este archivo está diseñado para ser usado como contexto en GitHub Copilot para generar queries SQL de alta calidad.
+Este proyecto descarga todas las páginas de la wiki de Datanex desde GitLab, las procesa, filtra las páginas relevantes, las convierte a Markdown y genera un archivo unificado (`vibe_SQL_copilot.txt`) que combina un prompt personalizado con toda la documentación de la estructura de la base de datos. Este archivo está diseñado para ser usado como contexto en LLMs (GitHub Copilot, Claude, ChatGPT, etc.) para generar queries SQL de alta calidad.
+
+> **Nota**: Esta versión genera un documento de contexto **ligero** (~600 líneas) que incluye solo la documentación de la wiki, sin los diccionarios de datos (que añadían ~38,000 líneas adicionales). Esto hace el archivo más manejable para la mayoría de LLMs.
 
 ## 🚀 Características
 
@@ -28,8 +30,7 @@ Este proyecto descarga todas las páginas de la wiki de Datanex desde GitLab, la
 - **Conversión a Markdown**: HTML → Markdown preservando tablas y estructura
 - **Limpieza automática**: Elimina secciones no relevantes y normaliza formato
 - **Unificación**: Combina todos los documentos en un solo archivo optimizado
-- **Procesamiento de diccionarios**: Convierte CSV a Markdown con optimización de tamaño
-- **Compactación inteligente**: Reduce tamaño eliminando prefijos comunes y redundancia
+- **Output ligero**: Genera un archivo de contexto compacto (~600 líneas) ideal para LLMs
 - **Pipeline modular**: Cada paso es independiente, testeable y auditable
 
 ## 📁 Estructura del Proyecto
@@ -40,7 +41,6 @@ pipeline_datanex/
 │   ├── download_wiki.py          # Descarga de páginas wiki
 │   ├── extract_text.py           # Extracción a Markdown
 │   ├── unify_markdown.py         # Unificación de markdowns
-│   ├── unify_dictionaries.py     # Unificación de diccionarios CSV
 │   └── create_final_output.py    # Creación del archivo final
 ├── test/                         # Tests/Pasos del pipeline
 │   ├── test_download_wiki.py
@@ -48,13 +48,8 @@ pipeline_datanex/
 │   ├── test_extract_text.py
 │   ├── test_download_linked_pages.py
 │   ├── test_unify_markdown.py
-│   ├── test_unify_dictionaries.py
 │   ├── test_create_final_output.py
 │   └── run_all_tests.py          # Ejecuta todo el pipeline
-├── dicc/                         # Diccionarios CSV
-│   ├── dic_diagnostic.csv        # Diccionario de diagnósticos
-│   ├── dic_lab.csv               # Diccionario de laboratorio
-│   └── dictionaries_unified.md   # Diccionarios unificados
 ├── data/                         # Datos procesados (ignorado en git)
 │   ├── wiki_html/                # HTML descargado (con estructura jerárquica)
 │   │   ├── metadata/             # Metadatos de descarga (manifest, logs, checksums)
@@ -63,14 +58,14 @@ pipeline_datanex/
 │   │   └── ...
 │   ├── wiki_work_html/           # HTML filtrado (páginas útiles)
 │   ├── wiki_markdown/            # Markdowns generados
-│   └── wiki_unified.md            # Markdown unificado
-├── main.py                       # Script principal
+│   └── wiki_unified.md           # Markdown unificado
+├── main.py                       # Script principal (pipeline de 5 pasos)
 ├── ejecutar_pipeline.bat         # Script batch para ejecutar en Windows
 ├── ejecutar_pipeline.sh          # Script bash para ejecutar en Linux/Mac
-├── prompt.txt                    # Prompt para Copilot
+├── prompt.txt                    # Prompt para el LLM
 ├── pags_descarte.txt             # Lista de páginas a descartar/excluir
 ├── README_vibe_query.md          # README estático para repo de salida
-└── vibe_SQL_copilot.txt          # Archivo final generado
+└── vibe_SQL_copilot.txt          # Archivo final generado (~600 líneas)
 ```
 
 ## 🔧 Instalación
@@ -143,8 +138,7 @@ Este comando ejecuta todos los pasos del pipeline en secuencia:
 2. **Filtrado**: Excluye las páginas listadas en `pags_descarte.txt` (procesa todas las demás)
 3. **Extracción a Markdown**: Convierte las páginas útiles a Markdown
 4. **Unificación de markdowns**: Combina todos los markdowns de la wiki en un solo archivo (excluyendo las de `pags_descarte.txt`)
-5. **Unificación de diccionarios**: Convierte diccionarios CSV a Markdown optimizado
-6. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md` → `vibe_SQL_copilot.txt`
+5. **Archivo final**: Combina `prompt.txt` + `wiki_unified.md` → `vibe_SQL_copilot.txt`
 
 ### Ejecutar pasos individuales
 
@@ -160,16 +154,10 @@ python test/test_filter_useful_pages.py
 # Paso 3: Extracción
 python test/test_extract_text.py
 
-# Paso 4: Descarga de referencias
-python test/test_download_linked_pages.py
-
-# Paso 5: Unificación de markdowns
+# Paso 4: Unificación de markdowns
 python test/test_unify_markdown.py
 
-# Paso 6: Unificación de diccionarios
-python test/test_unify_dictionaries.py
-
-# Paso 7: Archivo final
+# Paso 5: Archivo final
 python test/test_create_final_output.py
 ```
 
@@ -200,21 +188,7 @@ Access-Instructions
 
 ### Archivo `prompt.txt`
 
-Este archivo contiene el prompt que se incluirá al inicio del archivo final. Define el comportamiento esperado de Copilot al usar el contexto. Debe contener las secciones `### CONTEXTO ###` y `### DICCIONARIOS ###` donde se insertará el contenido correspondiente.
-
-### Carpeta `dicc/`
-
-Contiene los diccionarios CSV que se procesarán:
-- `dic_diagnostic.csv`: Diccionario de diagnósticos con códigos y descripciones
-- `dic_lab.csv`: Diccionario de laboratorio con códigos y descripciones
-
-**⚠️ Configuración de columnas**: Para que el sistema procese correctamente los CSV, **debes renombrar manualmente** las columnas en tus archivos CSV para que terminen en `_ref` y `_descr`. Por ejemplo:
-- Columna de códigos: `codigo_ref`, `id_ref`, `diagnostic_ref`, etc.
-- Columna de descripciones: `descripcion_descr`, `nombre_descr`, `diagnostic_descr`, etc.
-
-El sistema buscará automáticamente columnas que terminen en `*_ref` y `*_descr` en todos los archivos CSV de esta carpeta.
-
-Los diccionarios se procesan automáticamente y se optimizan para reducir el tamaño del archivo final.
+Este archivo contiene el prompt que se incluirá al inicio del archivo final. Define el comportamiento esperado del LLM al usar el contexto. Debe contener la sección `### CONTEXTO ###` donde se insertará la documentación de la wiki.
 
 ## 📊 Pipeline Detallado
 
@@ -251,21 +225,10 @@ Los diccionarios se procesan automáticamente y se optimizan para reducir el tam
 - Convierte tablas HTML a formato Markdown
 - Guarda en `data/wiki_unified.md`
 
-### Paso 5: Unificación de diccionarios
-- Lee todos los archivos CSV de la carpeta `dicc/`
-- Busca columnas que terminen en `*_ref` y `*_descr` (deben estar renombradas manualmente)
-- Extrae las columnas `*_ref` y `*_descr` de cada CSV
-- **Optimización de tamaño**:
-  - Detecta prefijos comunes en los códigos y los compacta
-  - Extrae texto común de las descripciones para evitar repeticiones
-  - Para `dic_lab.csv`: elimina conjunciones, determinantes y comas
-- Guarda en `dicc/dictionaries_unified.md`
-
-### Paso 6: Archivo final
-- Combina `prompt.txt` + `wiki_unified.md` + `dictionaries_unified.md`
+### Paso 5: Archivo final
+- Combina `prompt.txt` + `wiki_unified.md`
 - Inserta el contenido de la wiki después de `### CONTEXTO ###`
-- Inserta el contenido de diccionarios después de `### DICCIONARIOS ###`
-- Guarda en `vibe_SQL_copilot.txt`
+- Guarda en `vibe_SQL_copilot.txt` (~600 líneas, compacto y manejable para LLMs)
 
 ## 📝 Archivos Generados
 
@@ -283,16 +246,13 @@ Durante la ejecución del pipeline se generan los siguientes archivos:
 - `data/wiki_work_html/`: Archivos HTML filtrados (solo páginas útiles)
 - `data/wiki_markdown/`: Archivos Markdown generados de cada página
 - `data/wiki_unified.md`: Markdown unificado con todo el contenido de la wiki
-- `dicc/dictionaries_unified.md`: Diccionarios CSV convertidos a Markdown
 
 ### Salida Final
-- `vibe_SQL_copilot.txt`: Archivo final listo para usar en Copilot con estructura:
+- `vibe_SQL_copilot.txt`: Archivo final listo para usar con LLMs (~600 líneas):
   ```
   [Contenido de prompt.txt]
   ### CONTEXTO ###
-  [Contenido de wiki_unified.md]
-  ### DICCIONARIOS ###
-  [Contenido de dictionaries_unified.md]
+  [Contenido de wiki_unified.md - documentación de tablas]
   ```
 
 ## 🔍 Funciones Principales
@@ -318,15 +278,8 @@ Convierte HTML a Markdown preservando tablas y estructura.
 ### `unify_markdowns()`
 Combina múltiples archivos Markdown en uno solo, limpiando contenido no relevante.
 
-### `unify_dictionaries()`
-Convierte diccionarios CSV a Markdown optimizado:
-- Detecta prefijos comunes en códigos (sistema de árbol)
-- Extrae texto común de descripciones para evitar repeticiones
-- Aplica limpieza especial al diccionario de lab (elimina conjunciones, determinantes, comas)
-- Formato compacto: `prefix:texto_comun|suffix1:diff1|suffix2:diff2|...`
-
 ### `create_final_output()`
-Combina el prompt con la documentación unificada y los diccionarios, organizándolos en las secciones `### CONTEXTO ###` y `### DICCIONARIOS ###`.
+Combina el prompt con la documentación unificada, insertando el contenido de la wiki en la sección `### CONTEXTO ###`.
 
 ## 🧪 Testing
 

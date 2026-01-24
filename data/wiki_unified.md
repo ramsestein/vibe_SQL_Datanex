@@ -464,8 +464,9 @@ The `g_surgery` table:
 | start_date | DATETIME |  | When the surgery starts. |
 | end_date | DATETIME |  | When the surgery ends. |
 | surgery_ref | INT | fk | Number that identifies a surgery; it links to other Surgery tables. |
-| surgery_code | CHAR |  | Standard code for the surgery. |
+| surgery_code | CHAR |  | Standard code for the surgery. Local code named Q codes|
 | surgery_code_descr | CHAR |  | Surgery code description. |
+surgery_code is the Hospital Clinic local code for surgeries. The codes start with Q followed by numbers. Ex: surgery_code Q01972, surgery_code_descr: injeccio intravitria.
 # B. The g_surgery_team table
 It contains information about surgical tasks performed during surgical procedures.
 The `g_surgery_team` table:

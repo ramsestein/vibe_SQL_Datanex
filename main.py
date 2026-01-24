@@ -2,7 +2,8 @@
 Script principal para descargar y procesar la wiki de Datanex.
 """
 
-from src import download_wiki_pages, filter_useful_pages, extract_text, download_linked_pages, unify_markdowns, unify_dictionaries, create_final_output
+from src import download_wiki_pages, filter_useful_pages, extract_text, download_linked_pages, unify_markdowns, create_final_output
+# Nota: unify_dictionaries eliminado - los diccionarios son demasiado largos para el contexto del LLM
 
 
 def main():
@@ -76,37 +77,24 @@ def main():
     else:
         print("\n[WARN] No se pudo crear el archivo unificado")
     
-    # Paso 5: Unificar diccionarios CSV
+    # Paso 5: Crear archivo final (sin diccionarios para reducir tamaño del contexto)
     print("\n" + "="*60)
-    print("PASO 5: Unificación de diccionarios CSV")
-    print("="*60)
-    
-    dictionaries_file = unify_dictionaries(
-        dicc_dir="dicc",
-        output_file="dicc/dictionaries_unified.md"
-    )
-    
-    if dictionaries_file:
-        print(f"\n[OK] Archivo de diccionarios unificado creado: {dictionaries_file}")
-    else:
-        print("\n[WARN] No se pudo crear el archivo de diccionarios unificado")
-    
-    # Paso 6: Crear archivo final
-    print("\n" + "="*60)
-    print("PASO 6: Creación del archivo final")
+    print("PASO 5: Creación del archivo final (sin diccionarios)")
     print("="*60)
     
     final_file = create_final_output(
         prompt_file="prompt.txt",
         wiki_unified_file="data/wiki_unified.md",
-        dictionaries_file="dicc/dictionaries_unified.md",
+        dictionaries_file=None,  # Diccionarios desactivados - demasiado largos para contexto LLM
         output_file="vibe_SQL_copilot.txt"
     )
     
     if final_file:
         print(f"\n[OK] Archivo final creado: {final_file}")
+        print(f"     (Solo contiene wiki de contexto, sin diccionarios)")
     else:
-        print("\n[WARN] No se pudo crear el archivo final")    
+        print("\n[WARN] No se pudo crear el archivo final")
+
 
 if __name__ == "__main__":
     main()
